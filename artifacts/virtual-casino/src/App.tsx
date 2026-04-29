@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "sonner";
 import { CasinoProvider } from "@/lib/store";
+import { PlayAgainProvider } from "@/lib/playAgain";
 import Layout from "@/components/layout/Layout";
 import Lobby from "@/pages/Lobby";
 import Slots from "@/pages/Slots";
@@ -15,6 +16,8 @@ import Crash from "@/pages/Crash";
 import Wheel from "@/pages/Wheel";
 import HiLo from "@/pages/HiLo";
 import Keno from "@/pages/Keno";
+import CoinFlip from "@/pages/CoinFlip";
+import Scratch from "@/pages/Scratch";
 import OwnerVault from "@/pages/OwnerVault";
 import History from "@/pages/History";
 import Settings from "@/pages/Settings";
@@ -37,6 +40,8 @@ function Router() {
         <Route path="/wheel" component={Wheel} />
         <Route path="/hilo" component={HiLo} />
         <Route path="/keno" component={Keno} />
+        <Route path="/coin-flip" component={CoinFlip} />
+        <Route path="/scratch" component={Scratch} />
         <Route path="/owner-vault" component={OwnerVault} />
         <Route path="/history" component={History} />
         <Route path="/settings" component={Settings} />
@@ -51,9 +56,11 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <CasinoProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
+          <PlayAgainProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+          </PlayAgainProvider>
           <Toaster
             position="top-center"
             theme="dark"

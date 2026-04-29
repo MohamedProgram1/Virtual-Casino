@@ -32,6 +32,8 @@ export type GameType =
   | "wheel"
   | "hilo"
   | "keno"
+  | "coinflip"
+  | "scratch"
   | "ownerVault";
 
 export interface BetMeta {
@@ -89,6 +91,7 @@ interface CasinoContextType extends CasinoState {
   clearHistory: () => void;
   updateSettings: (settings: Partial<CasinoSettings>) => void;
   unlockOwner: (code: string) => boolean;
+  lockOwner: () => void;
   equipTitle: (id: string | null) => void;
 }
 
@@ -364,6 +367,20 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const lockOwner = () => {
+    setState((prev) => {
+      if (!prev.ownerMode) return prev;
+      setTimeout(
+        () =>
+          toast.success("Owner mode locked.", {
+            description: "Vault sealed. Re-enter the code to reopen.",
+          }),
+        0,
+      );
+      return { ...prev, ownerMode: false };
+    });
+  };
+
   const unlockOwner = (code: string): boolean => {
     if (code !== OWNER_CODE) {
       toast.error("Incorrect code.");
@@ -418,6 +435,7 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         clearHistory,
         updateSettings,
         unlockOwner,
+        lockOwner,
         equipTitle,
       }}
     >

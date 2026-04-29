@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { Redirect } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { KeyRound, Coins, RotateCcw } from "lucide-react";
+import { KeyRound, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useCasinoStore } from "@/lib/store";
+import { useRegisterPlayAgain } from "@/lib/playAgain";
 import { cn } from "@/lib/utils";
 
-// Owner-exclusive game: pick one of 5 vaults. Always profitable.
-// Contents shuffled each round; minimum return is 1.2× (your bet plus a touch).
-const VAULT_CONTENTS = [1.2, 1.5, 2, 3, 5];
+// Owner-exclusive game: pick one of 5 vaults. Two are duds (0×), three pay.
+// Slight positive expected value — average ≈ 1.16× — but with real loss risk
+// so the vault can't be farmed for infinite money.
+const VAULT_CONTENTS = [0, 0, 1.2, 1.5, 3.1];
 
 const BET_PRESETS = [25, 100, 250, 500];
 
@@ -45,6 +47,13 @@ export default function OwnerVault() {
     setResult(null);
   };
 
+  useRegisterPlayAgain(
+    picked !== null
+      ? { label: "New Vault Set", onClick: startNew }
+      : null,
+    [picked],
+  );
+
   const pick = (idx: number) => {
     if (picked !== null) return;
     if (balance < bet) return;
@@ -60,13 +69,13 @@ export default function OwnerVault() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="text-center space-y-2">
         <div className="text-xs uppercase tracking-[0.3em] text-amber-300">
-          Owner Access · Always in Profit
+          Owner Access · Honest Edge
         </div>
         <h1 className="font-serif text-4xl bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 bg-clip-text text-transparent">
           Owner's Vault
         </h1>
         <div className="text-xs text-muted-foreground italic">
-          Five vaults. Every one pays at least your bet back.
+          Five vaults. Two are empty. Pick one and own the consequences.
         </div>
       </div>
 
@@ -202,7 +211,8 @@ export default function OwnerVault() {
       )}
 
       <div className="text-xs text-muted-foreground/70 text-center">
-        Owner perk: All vaults guarantee at least 1.2× return. Average payout 2.54×.
+        Vault contents: 0×, 0×, 1.2×, 1.5×, 3.1× — shuffled each round. Slight house
+        edge in your favor; not a money printer.
       </div>
     </div>
   );

@@ -1,15 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
 import { Coins, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useCasinoStore } from "@/lib/store";
+import { useRegisterPlayAgain } from "@/lib/playAgain";
 import { cn } from "@/lib/utils";
 
 type Risk = "low" | "medium" | "high";
 
 const ROWS = 12;
-const SLOTS = ROWS + 1; // 13
 const PEG_SPACING_X = 30;
 const PEG_SPACING_Y = 28;
 const BOARD_WIDTH = ROWS * PEG_SPACING_X + 60;
@@ -38,25 +38,37 @@ const SLOT_COLORS = [
 ];
 
 const BET_PRESETS = [10, 25, 50, 100];
+const BALL_COUNTS = [1, 3, 5, 10] as const;
 
 interface BallDrop {
   id: number;
   path: number[]; // 0 = left, 1 = right
   slot: number;
+  delay: number;
+}
+
+interface SettleSummary {
+  drops: number;
+  totalBet: number;
+  totalPayout: number;
+  hits: { slot: number; mult: number }[];
 }
 
 export default function Plinko() {
   const { balance, placeBet } = useCasinoStore();
   const [bet, setBet] = useState(25);
+  const [ballCount, setBallCount] = useState<number>(1);
   const [risk, setRisk] = useState<Risk>("medium");
   const [drops, setDrops] = useState<BallDrop[]>([]);
-  const [lastResult, setLastResult] = useState<{ slot: number; mult: number; payout: number; bet: number } | null>(null);
+  const [hitSlots, setHitSlots] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [summary, setSummary] = useState<SettleSummary | null>(null);
+  const idRef = useRef(0);
 
   const multipliers = MULTIPLIERS[risk];
+  const totalCost = bet * ballCount;
 
   const pegRows = useMemo(() => {
-    // Each row r has r+1 pegs, centered
     const rows: { x: number; y: number }[][] = [];
     for (let r = 0; r < ROWS; r++) {
       const row: { x: number; y: number }[] = [];
@@ -71,34 +83,78 @@ export default function Plinko() {
   }, []);
 
   const drop = () => {
-    if (busy || balance < bet) return;
+    if (busy || balance < totalCost) return;
     setBusy(true);
-    setLastResult(null);
+    setSummary(null);
+    setHitSlots(new Set());
 
-    const path: number[] = [];
-    for (let i = 0; i < ROWS; i++) {
-      path.push(Math.random() > 0.5 ? 1 : 0);
+    const newDrops: BallDrop[] = [];
+    const baseId = idRef.current;
+    const stagger = 110; // ms between balls
+
+    for (let n = 0; n < ballCount; n++) {
+      const path: number[] = [];
+      for (let i = 0; i < ROWS; i++) {
+        path.push(Math.random() > 0.5 ? 1 : 0);
+      }
+      const slot = path.reduce((s, c) => s + c, 0);
+      newDrops.push({
+        id: baseId + n + 1,
+        path,
+        slot,
+        delay: n * stagger,
+      });
     }
-    const slot = path.reduce((s, c) => s + c, 0);
-    const id = Date.now();
-    const newDrop: BallDrop = { id, path, slot };
-    setDrops((prev) => [...prev.slice(-4), newDrop]);
+    idRef.current = baseId + ballCount;
+    setDrops((prev) => [...prev, ...newDrops]);
 
-    const mult = multipliers[slot];
-    const payout = Math.floor(bet * mult);
-
-    // Wait for drop animation, then settle
     const animDuration = 1900;
-    setTimeout(() => {
-      placeBet("plinko", bet, payout, { multiplier: mult });
-      setLastResult({ slot, mult, payout, bet });
+    const lastSettle = animDuration + (ballCount - 1) * stagger;
+
+    let totalPayout = 0;
+    const hits: { slot: number; mult: number }[] = [];
+
+    newDrops.forEach((d) => {
+      window.setTimeout(() => {
+        const mult = multipliers[d.slot];
+        const payout = Math.floor(bet * mult);
+        totalPayout += payout;
+        hits.push({ slot: d.slot, mult });
+        placeBet("plinko", bet, payout, { multiplier: mult });
+        setHitSlots((prev) => {
+          const next = new Set(prev);
+          next.add(d.slot);
+          return next;
+        });
+      }, animDuration + d.delay);
+    });
+
+    window.setTimeout(() => {
+      setSummary({
+        drops: ballCount,
+        totalBet: bet * ballCount,
+        totalPayout,
+        hits,
+      });
       setBusy(false);
-      // Clean up old drops
-      setTimeout(() => {
-        setDrops((prev) => prev.filter((d) => d.id !== id));
+      window.setTimeout(() => {
+        setDrops((prev) =>
+          prev.filter((existing) => !newDrops.find((n) => n.id === existing.id)),
+        );
       }, 600);
-    }, animDuration);
+    }, lastSettle + 80);
   };
+
+  useRegisterPlayAgain(
+    !busy && summary
+      ? {
+          label: ballCount > 1 ? `Drop ${ballCount} Balls` : "Drop Again",
+          onClick: drop,
+          disabled: balance < totalCost,
+        }
+      : null,
+    [busy, summary, ballCount, totalCost, balance],
+  );
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -141,22 +197,13 @@ export default function Plinko() {
           style={{ width: BOARD_WIDTH, height: BOARD_HEIGHT }}
         >
           {/* Pegs */}
-          <div
-            className="absolute"
-            style={{
-              left: BOARD_WIDTH / 2,
-              top: 0,
-            }}
-          >
+          <div className="absolute" style={{ left: BOARD_WIDTH / 2, top: 0 }}>
             {pegRows.map((row, r) =>
               row.map((peg, i) => (
                 <div
                   key={`peg-${r}-${i}`}
                   className="absolute w-2 h-2 rounded-full bg-primary/40 shadow-[0_0_6px_rgba(212,175,55,0.4)]"
-                  style={{
-                    left: peg.x - 4,
-                    top: peg.y - 4,
-                  }}
+                  style={{ left: peg.x - 4, top: peg.y - 4 }}
                 />
               )),
             )}
@@ -165,13 +212,9 @@ export default function Plinko() {
           {/* Balls */}
           <div
             className="absolute pointer-events-none"
-            style={{
-              left: BOARD_WIDTH / 2,
-              top: 0,
-            }}
+            style={{ left: BOARD_WIDTH / 2, top: 0 }}
           >
             {drops.map((d) => {
-              // Build keyframes
               const xs: number[] = [0];
               const ys: number[] = [0];
               let x = 0;
@@ -180,7 +223,6 @@ export default function Plinko() {
                 xs.push(x * PEG_SPACING_X);
                 ys.push((i + 1) * PEG_SPACING_Y);
               }
-              // Final settle into the slot
               xs.push(x * PEG_SPACING_X);
               ys.push(BOARD_HEIGHT - 24);
 
@@ -191,10 +233,13 @@ export default function Plinko() {
                   animate={{ x: xs, y: ys, opacity: [0, 1, 1, 1] }}
                   transition={{
                     duration: 1.9,
+                    delay: d.delay / 1000,
                     times: [
                       0,
                       0.05,
-                      ...xs.slice(2).map((_, i) => 0.05 + ((i + 1) / xs.length) * 0.9),
+                      ...xs
+                        .slice(2)
+                        .map((_, i) => 0.05 + ((i + 1) / xs.length) * 0.9),
                     ].slice(0, xs.length),
                     ease: "easeIn",
                   }}
@@ -213,20 +258,21 @@ export default function Plinko() {
             style={{ bottom: 0, height: 28 }}
           >
             {multipliers.map((m, i) => {
-              const isHit = lastResult?.slot === i;
+              const isHit = hitSlots.has(i);
               return (
                 <motion.div
                   key={i}
                   animate={
                     isHit
-                      ? { scale: [1, 1.15, 1], y: [0, -3, 0] }
+                      ? { scale: [1, 1.18, 1], y: [0, -3, 0] }
                       : { scale: 1, y: 0 }
                   }
                   transition={{ duration: 0.5 }}
                   className={cn(
                     "flex-1 max-w-[26px] rounded-sm flex items-center justify-center text-[9px] font-bold tabular-nums bg-gradient-to-b text-zinc-900 shadow-md",
                     SLOT_COLORS[i],
-                    isHit && "ring-2 ring-primary ring-offset-1 ring-offset-background",
+                    isHit &&
+                      "ring-2 ring-primary ring-offset-1 ring-offset-background",
                   )}
                 >
                   {m}×
@@ -237,8 +283,8 @@ export default function Plinko() {
         </div>
 
         {/* Result message */}
-        <div className="mt-4 h-12 flex items-center justify-center">
-          {lastResult && (
+        <div className="mt-4 min-h-12 flex items-center justify-center">
+          {summary && (
             <motion.div
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
@@ -247,20 +293,26 @@ export default function Plinko() {
               <div
                 className={cn(
                   "font-serif text-2xl",
-                  lastResult.payout > lastResult.bet
+                  summary.totalPayout > summary.totalBet
                     ? "text-emerald-400"
-                    : lastResult.payout === lastResult.bet
+                    : summary.totalPayout === summary.totalBet
                       ? "text-amber-200"
                       : "text-rose-400",
                 )}
               >
-                {lastResult.mult}× ·{" "}
-                {lastResult.payout > lastResult.bet
-                  ? `+${lastResult.payout - lastResult.bet}`
-                  : lastResult.payout === lastResult.bet
+                {summary.drops} ball{summary.drops > 1 ? "s" : ""} ·{" "}
+                {summary.totalPayout > summary.totalBet
+                  ? `+${summary.totalPayout - summary.totalBet}`
+                  : summary.totalPayout === summary.totalBet
                     ? "even"
-                    : `${lastResult.payout - lastResult.bet}`}
+                    : `${summary.totalPayout - summary.totalBet}`}
               </div>
+              {summary.drops > 1 && (
+                <div className="text-xs text-muted-foreground mt-1 font-mono">
+                  bet {summary.totalBet} → won {summary.totalPayout} ·{" "}
+                  best {Math.max(...summary.hits.map((h) => h.mult))}×
+                </div>
+              )}
             </motion.div>
           )}
         </div>
@@ -269,8 +321,10 @@ export default function Plinko() {
       {/* Bet controls */}
       <div className="casino-card p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">Bet</div>
-          <div className="font-mono text-2xl text-primary tabular-nums">{bet}</div>
+          <div className="text-sm text-muted-foreground">Bet per ball</div>
+          <div className="font-mono text-2xl text-primary tabular-nums">
+            {bet}
+          </div>
         </div>
         <Slider
           value={[bet]}
@@ -294,17 +348,57 @@ export default function Plinko() {
             </Button>
           ))}
         </div>
+
+        {/* Ball count selector */}
+        <div className="pt-2 border-t border-primary/10 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">Balls per drop</div>
+            <div className="font-mono text-lg text-primary tabular-nums">
+              ×{ballCount}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {BALL_COUNTS.map((n) => {
+              const cost = bet * n;
+              const can = cost <= balance;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  disabled={busy || !can}
+                  onClick={() => setBallCount(n)}
+                  className={cn(
+                    "flex-1 rounded-lg border py-2 text-sm font-semibold transition-all",
+                    ballCount === n
+                      ? "border-primary bg-primary/15 text-primary shadow-[0_0_12px_rgba(212,175,55,0.25)]"
+                      : "border-primary/20 text-muted-foreground hover:border-primary/50 hover:text-foreground",
+                    (busy || !can) && "opacity-40 cursor-not-allowed",
+                  )}
+                >
+                  {n}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <Button
           size="lg"
-          disabled={busy || balance < bet}
+          disabled={busy || balance < totalCost}
           onClick={drop}
           className="w-full h-14 text-lg font-serif bg-gradient-to-b from-primary to-primary/80 text-primary-foreground"
         >
           <Circle className="w-5 h-5 mr-2" fill="currentColor" />
-          {balance < bet ? "Insufficient Chips" : busy ? "Falling..." : "Drop"}
-          {!busy && balance >= bet && (
+          {balance < totalCost
+            ? "Insufficient Chips"
+            : busy
+              ? "Falling..."
+              : ballCount > 1
+                ? `Drop ${ballCount}`
+                : "Drop"}
+          {!busy && balance >= totalCost && (
             <span className="ml-2 opacity-75">
-              <Coins className="w-4 h-4 inline -mt-0.5" /> {bet}
+              <Coins className="w-4 h-4 inline -mt-0.5" /> {totalCost}
             </span>
           )}
         </Button>

@@ -140,13 +140,13 @@ function AchievementsPanel() {
 }
 
 function OwnerPanel() {
-  const { ownerMode, unlockOwner } = useCasinoStore();
+  const { ownerMode, unlockOwner, lockOwner } = useCasinoStore();
   const [code, setCode] = useState("");
   const [show, setShow] = useState(false);
 
   if (ownerMode) {
     return (
-      <div className="casino-card p-6 border-amber-400/40">
+      <div className="casino-card p-6 border-amber-400/40 space-y-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-amber-400/15 border border-amber-400/40 flex items-center justify-center shrink-0">
             <KeyRound className="w-5 h-5 text-amber-300" />
@@ -161,6 +161,14 @@ function OwnerPanel() {
           </div>
           <Check className="w-5 h-5 text-amber-300 shrink-0" />
         </div>
+        <Button
+          variant="outline"
+          onClick={lockOwner}
+          className="w-full border-amber-400/40 text-amber-200 hover:bg-amber-400/10"
+        >
+          <Lock className="w-4 h-4 mr-2" />
+          Lock Owner Mode
+        </Button>
       </div>
     );
   }

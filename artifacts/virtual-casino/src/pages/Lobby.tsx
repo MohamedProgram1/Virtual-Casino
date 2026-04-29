@@ -100,9 +100,21 @@ const GAME_CARDS: GameCard[] = [
     accent: "from-indigo-500/20 to-blue-900/10",
   },
   {
+    id: "coinflip",
+    tagline: "Heads or tails. Fifty-fifty, almost.",
+    blurb: "One toss, instant result. Double up or call it after a streak.",
+    accent: "from-yellow-500/20 to-orange-900/10",
+  },
+  {
+    id: "scratch",
+    tagline: "Three of a kind pays. Scratch and pray.",
+    blurb: "Reveal nine symbols. Match three for a multiplier on your stake.",
+    accent: "from-pink-500/20 to-rose-900/10",
+  },
+  {
     id: "ownerVault",
-    tagline: "The owner's private game. Edge always yours.",
-    blurb: "One of five vaults holds the prize. Pick it and double your bet.",
+    tagline: "The owner's private game. Risk and reward.",
+    blurb: "Five vaults — some pay, some don't. Pick wisely; the house is honest now.",
     accent: "from-amber-400/30 to-amber-900/15",
     ownerOnly: true,
   },

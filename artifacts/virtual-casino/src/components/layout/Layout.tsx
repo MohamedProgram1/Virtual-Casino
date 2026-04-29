@@ -10,6 +10,7 @@ import {
   Sparkles,
   Award,
   KeyRound,
+  RotateCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -17,6 +18,7 @@ import { useCasinoStore } from "@/lib/store";
 import { getLevelFor, getNextLevel } from "@/lib/levels";
 import { getAchievement } from "@/lib/achievements";
 import { GAME_LABELS } from "@/lib/games";
+import { usePlayAgainSlot } from "@/lib/playAgain";
 import { cn } from "@/lib/utils";
 
 const STATIC_TITLES: Record<string, string> = {
@@ -36,6 +38,8 @@ const GAME_PAGE_TITLES: Record<string, string> = {
   "/wheel": GAME_LABELS.wheel,
   "/hilo": GAME_LABELS.hilo,
   "/keno": GAME_LABELS.keno,
+  "/coin-flip": GAME_LABELS.coinflip,
+  "/scratch": GAME_LABELS.scratch,
   "/owner-vault": GAME_LABELS.ownerVault,
 };
 
@@ -159,6 +163,34 @@ function OwnerBadge() {
   );
 }
 
+function PlayAgainFab() {
+  const slot = usePlayAgainSlot();
+  return (
+    <AnimatePresence>
+      {slot && (
+        <motion.div
+          key="play-again-fab"
+          initial={{ opacity: 0, y: 20, scale: 0.85 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.85 }}
+          transition={{ type: "spring", stiffness: 400, damping: 22 }}
+          className="fixed bottom-6 right-6 z-50 sm:bottom-8 sm:right-8"
+        >
+          <Button
+            size="lg"
+            onClick={slot.onClick}
+            disabled={slot.disabled}
+            className="rounded-full h-14 px-6 shadow-2xl shadow-primary/40 bg-gradient-to-b from-primary to-primary/80 hover:from-primary hover:to-primary text-primary-foreground font-semibold border border-primary-foreground/20"
+          >
+            <RotateCw className="w-5 h-5 mr-2" />
+            {slot.label ?? "Play Again"}
+          </Button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export default function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const pageTitle = PAGE_TITLES[location] ?? "Lucky Vault";
@@ -240,6 +272,8 @@ export default function Layout({ children }: { children: ReactNode }) {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      <PlayAgainFab />
 
       {/* Footer */}
       <footer className="border-t border-primary/10 py-6 mt-8">

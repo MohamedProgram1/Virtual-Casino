@@ -10,6 +10,8 @@ import {
   ArrowUpDown,
   Hash,
   KeyRound,
+  Coins,
+  Ticket,
   type LucideIcon,
 } from "lucide-react";
 import type { GameType } from "./store";
@@ -25,6 +27,8 @@ export const GAME_LABELS: Record<GameType, string> = {
   wheel: "Wheel of Fortune",
   hilo: "Hi-Lo",
   keno: "Keno",
+  coinflip: "Coin Flip",
+  scratch: "Scratch Card",
   ownerVault: "Owner's Vault",
 };
 
@@ -39,6 +43,8 @@ export const GAME_ROUTES: Record<GameType, string> = {
   wheel: "/wheel",
   hilo: "/hilo",
   keno: "/keno",
+  coinflip: "/coin-flip",
+  scratch: "/scratch",
   ownerVault: "/owner-vault",
 };
 
@@ -53,5 +59,7 @@ export const GAME_ICONS: Record<GameType, LucideIcon> = {
   wheel: PieChart,
   hilo: ArrowUpDown,
   keno: Hash,
+  coinflip: Coins,
+  scratch: Ticket,
   ownerVault: KeyRound,
 };

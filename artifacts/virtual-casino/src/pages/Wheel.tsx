@@ -1,12 +1,12 @@
-import { useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, useMotionValue } from "framer-motion";
 import { PieChart, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useCasinoStore } from "@/lib/store";
+import { useRegisterPlayAgain } from "@/lib/playAgain";
 import { cn } from "@/lib/utils";
 
-// 16 segments, ordered around the wheel
 const SEGMENTS: { mult: number; color: string }[] = [
   { mult: 0, color: "#3f3f46" },
   { mult: 1, color: "#0d9488" },
@@ -67,6 +67,25 @@ export default function Wheel() {
   } | null>(null);
   const rotationRef = useRef(0);
 
+  // Clacker — bounces each time a peg passes the pointer
+  const motionRot = useMotionValue(0);
+  const [clackerKick, setClackerKick] = useState(0);
+  const lastSegRef = useRef<number>(0);
+
+  useEffect(() => {
+    const unsub = motionRot.on("change", (v) => {
+      // Compute the segment index currently under the pointer (top, -90°).
+      // Wheel rotates by `v` degrees; segment 0 starts at the top.
+      // After rotation, segment under pointer = (-v / SEG_DEG) mod N
+      const idx = Math.floor(((-v % 360) + 360) % 360 / SEG_DEG);
+      if (idx !== lastSegRef.current) {
+        lastSegRef.current = idx;
+        setClackerKick((k) => k + 1);
+      }
+    });
+    return () => unsub();
+  }, [motionRot]);
+
   const spin = () => {
     if (spinning || balance < bet) return;
     setResult(null);
@@ -75,10 +94,7 @@ export default function Wheel() {
     const idx = Math.floor(Math.random() * N);
     const seg = SEGMENTS[idx];
 
-    // Land such that idx is at the top (under the pointer)
-    // Top is at -90° in SVG, segment idx is at idx*SEG_DEG.
-    // To land idx at top (angle 0 in our wheel coordinate), rotate by -idx*SEG_DEG.
-    const turns = 6 + Math.floor(Math.random() * 4); // 6-9 full turns
+    const turns = 6 + Math.floor(Math.random() * 4);
     const baseAngle = turns * 360;
     const targetAngle = baseAngle - idx * SEG_DEG;
     const newRotation = rotationRef.current + targetAngle;
@@ -92,6 +108,13 @@ export default function Wheel() {
       setSpinning(false);
     }, 4200);
   };
+
+  useRegisterPlayAgain(
+    !spinning && result
+      ? { label: "Spin Again", onClick: spin, disabled: balance < bet }
+      : null,
+    [spinning, result, bet, balance],
+  );
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -109,7 +132,7 @@ export default function Wheel() {
         <div className="relative mx-auto" style={{ width: 320, height: 360 }}>
           {/* Pointer */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 z-10"
+            className="absolute left-1/2 -translate-x-1/2 z-20"
             style={{ top: -4 }}
           >
             <div
@@ -123,6 +146,38 @@ export default function Wheel() {
             />
           </div>
 
+          {/* Clacker — small flexible arm just below the pointer that bounces
+              when each segment edge passes underneath. */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 z-10 origin-top"
+            style={{ top: 16 }}
+          >
+            <motion.div
+              key={clackerKick}
+              initial={{ rotate: 0 }}
+              animate={{ rotate: [0, -22, 6, 0] }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              style={{ transformOrigin: "50% 0%" }}
+            >
+              <div
+                className="w-1.5 h-6 rounded-b-md mx-auto"
+                style={{
+                  background:
+                    "linear-gradient(180deg, hsl(46 65% 53%), hsl(46 60% 35%))",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.4)",
+                }}
+              />
+              <div
+                className="w-3 h-3 -mt-1 mx-auto rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle at 30% 30%, hsl(46 80% 70%), hsl(46 50% 30%))",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.5)",
+                }}
+              />
+            </motion.div>
+          </div>
+
           <motion.svg
             width="320"
             height="320"
@@ -130,6 +185,11 @@ export default function Wheel() {
             animate={{ rotate: rotation }}
             transition={{ duration: 4, ease: [0.17, 0.67, 0.32, 1] }}
             style={{ transformOrigin: "160px 160px" }}
+            onUpdate={(latest) => {
+              const r = latest.rotate;
+              if (typeof r === "number") motionRot.set(r);
+              else if (typeof r === "string") motionRot.set(parseFloat(r));
+            }}
           >
             {SEGMENTS.map((s, i) => {
               const lp = labelPos(i);
@@ -140,6 +200,23 @@ export default function Wheel() {
                     fill={s.color}
                     stroke="hsl(0 0% 7%)"
                     strokeWidth="2"
+                  />
+                  {/* Edge peg dot — visual reference for the clacker */}
+                  <circle
+                    cx={
+                      CENTER +
+                      (RADIUS - 6) *
+                        Math.cos(((i * SEG_DEG - 90 - SEG_DEG / 2) * Math.PI) / 180)
+                    }
+                    cy={
+                      CENTER +
+                      (RADIUS - 6) *
+                        Math.sin(((i * SEG_DEG - 90 - SEG_DEG / 2) * Math.PI) / 180)
+                    }
+                    r="2.5"
+                    fill="hsl(46 65% 53%)"
+                    stroke="hsl(0 0% 5%)"
+                    strokeWidth="1"
                   />
                   <text
                     x={lp.x}
@@ -232,7 +309,11 @@ export default function Wheel() {
           className="w-full h-14 text-lg font-serif bg-gradient-to-b from-primary to-primary/80 text-primary-foreground"
         >
           <PieChart className="w-5 h-5 mr-2" />
-          {balance < bet ? "Insufficient Chips" : spinning ? "Spinning..." : "Spin"}
+          {balance < bet
+            ? "Insufficient Chips"
+            : spinning
+              ? "Spinning..."
+              : "Spin"}
           {!spinning && balance >= bet && (
             <span className="ml-2 opacity-75">
               <Coins className="w-4 h-4 inline -mt-0.5" /> {bet}
