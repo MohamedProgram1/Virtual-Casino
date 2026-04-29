@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
 import { toast } from "sonner";
+import { getLevelFor } from "./levels";
 
 export type GameType = "slots" | "blackjack" | "roulette" | "dice";
 
@@ -72,6 +73,18 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  // Level-up detection: compare current vs previous level on hands change
+  const prevLevelRef = useRef<number>(getLevelFor(state.stats.handsPlayed).level);
+  useEffect(() => {
+    const newLevel = getLevelFor(state.stats.handsPlayed);
+    if (newLevel.level > prevLevelRef.current) {
+      toast.success(`Promoted to ${newLevel.name}!`, {
+        description: newLevel.blurb,
+      });
+      prevLevelRef.current = newLevel.level;
+    }
+  }, [state.stats.handsPlayed]);
+
   const placeBet = (game: GameType, amount: number, payout: number) => {
     setState((prev) => {
       if (prev.balance < amount) {
@@ -133,6 +146,7 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
 
   const resetAccount = () => {
     setState({ ...DEFAULT_STATE, lastRefillTime: Date.now() });
+    prevLevelRef.current = 1;
     toast.success("Account reset to 1000 chips.");
   };
 

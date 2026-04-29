@@ -1,7 +1,21 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Dices, Spade, CircleDot, Cherry, TrendingUp, TrendingDown, Trophy, Coins } from "lucide-react";
+import {
+  Dices,
+  Spade,
+  CircleDot,
+  Cherry,
+  TrendingUp,
+  TrendingDown,
+  Trophy,
+  Coins,
+  Award,
+  Lock,
+  Sparkles,
+} from "lucide-react";
 import { useCasinoStore, GameType } from "@/lib/store";
+import { getLevelFor, getNextLevel, isVipUnlocked, VIP_UNLOCKS, LEVELS } from "@/lib/levels";
+import { cn } from "@/lib/utils";
 
 const GAMES: Array<{
   id: GameType;
@@ -142,6 +156,69 @@ function StatTile({ icon: Icon, label, value }: { icon: typeof Coins; label: str
   );
 }
 
+function LevelProgress() {
+  const { stats } = useCasinoStore();
+  const current = getLevelFor(stats.handsPlayed);
+  const next = getNextLevel(stats.handsPlayed);
+  const progress = next
+    ? ((stats.handsPlayed - current.threshold) /
+        (next.threshold - current.threshold)) *
+      100
+    : 100;
+
+  return (
+    <div className="casino-card p-6 relative overflow-hidden">
+      <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-primary/5 blur-2xl" />
+      <div className="relative flex items-start justify-between gap-4 mb-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Award className="w-4 h-4 text-primary" />
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">
+              Player Tier
+            </div>
+          </div>
+          <div className="font-serif text-3xl casino-gradient-text">
+            {current.name}
+          </div>
+          <div className="text-sm text-muted-foreground italic mt-1">
+            {current.blurb}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">
+            Level
+          </div>
+          <div className="font-serif text-3xl text-primary">{current.level}</div>
+        </div>
+      </div>
+
+      <div className="space-y-2 relative">
+        <div className="h-2 rounded-full bg-background overflow-hidden border border-primary/15">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="h-full bg-gradient-to-r from-primary/50 via-primary to-amber-300"
+          />
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground font-mono">
+            {stats.handsPlayed} hands played
+          </span>
+          {next ? (
+            <span className="text-primary/80">
+              {next.threshold - stats.handsPlayed} to{" "}
+              <span className="font-semibold">{next.name}</span>
+            </span>
+          ) : (
+            <span className="text-primary/80">Highest tier reached.</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Lobby() {
   const { stats, balance } = useCasinoStore();
 
@@ -167,6 +244,9 @@ export default function Lobby() {
         </motion.div>
       </section>
 
+      {/* Player tier */}
+      <LevelProgress />
+
       {/* Stats */}
       <section className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <StatTile icon={Coins} label="Balance" value={balance.toLocaleString()} />
@@ -187,34 +267,61 @@ export default function Lobby() {
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {GAMES.map((game, i) => (
-            <motion.div
-              key={game.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 + i * 0.06 }}
-            >
-              <Link href={game.href}>
-                <div className="group relative casino-card p-6 cursor-pointer hover:border-primary/40 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(212,175,55,0.15)]">
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-br ${game.accent} opacity-60 pointer-events-none`}
-                  />
-                  <div className="relative flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-background/60 border border-primary/30 flex items-center justify-center shrink-0 group-hover:border-primary/60 transition-colors">
-                      <game.icon className="w-7 h-7 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-serif text-xl mb-0.5">{game.title}</div>
-                      <div className="text-sm text-primary/80 italic mb-2">
-                        {game.tagline}
+          {GAMES.map((game, i) => {
+            const unlock = VIP_UNLOCKS[game.id];
+            const vipUnlocked = isVipUnlocked(game.id, stats.handsPlayed);
+            const requiredLevel = LEVELS.find((l) => l.level === unlock.unlockLevel);
+            return (
+              <motion.div
+                key={game.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 + i * 0.06 }}
+              >
+                <Link href={game.href}>
+                  <div className="group relative casino-card p-6 cursor-pointer hover:border-primary/40 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(212,175,55,0.15)]">
+                    <div
+                      className={`absolute inset-0 bg-gradient-to-br ${game.accent} opacity-60 pointer-events-none`}
+                    />
+                    <div className="relative flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-xl bg-background/60 border border-primary/30 flex items-center justify-center shrink-0 group-hover:border-primary/60 transition-colors">
+                        <game.icon className="w-7 h-7 text-primary" />
                       </div>
-                      <div className="text-sm text-muted-foreground">{game.blurb}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <span className="font-serif text-xl">{game.title}</span>
+                          {vipUnlocked ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-b from-amber-300/30 to-primary/20 border border-primary/40 text-[10px] font-bold uppercase tracking-wider text-primary">
+                              <Sparkles className="w-2.5 h-2.5" />
+                              VIP
+                            </span>
+                          ) : (
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-card/60 border border-muted-foreground/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground",
+                              )}
+                            >
+                              <Lock className="w-2.5 h-2.5" />
+                              VIP @ {requiredLevel?.name}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-primary/80 italic mb-2">
+                          {game.tagline}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{game.blurb}</div>
+                        {vipUnlocked && (
+                          <div className="text-xs text-primary/70 mt-2 italic">
+                            VIP perk: {unlock.perk}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+                </Link>
+              </motion.div>
+            );
+          })}
         </div>
       </section>
 
@@ -229,6 +336,55 @@ export default function Lobby() {
           </Link>
         </div>
         <ActivityTicker />
+      </section>
+
+      {/* Tier roadmap */}
+      <section>
+        <h2 className="font-serif text-2xl mb-5">Tier Roadmap</h2>
+        <div className="space-y-2">
+          {LEVELS.map((l) => {
+            const reached = stats.handsPlayed >= l.threshold;
+            const unlocksGames = Object.values(VIP_UNLOCKS).filter(
+              (u) => u.unlockLevel === l.level,
+            );
+            return (
+              <div
+                key={l.level}
+                className={cn(
+                  "flex items-center gap-4 px-4 py-3 rounded-lg border transition-colors",
+                  reached
+                    ? "border-primary/30 bg-primary/5"
+                    : "border-primary/10 bg-card/30 opacity-70",
+                )}
+              >
+                <div
+                  className={cn(
+                    "w-9 h-9 rounded-full flex items-center justify-center font-bold shrink-0",
+                    reached
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {l.level}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-serif text-base">{l.name}</span>
+                    <span className="text-xs text-muted-foreground font-mono">
+                      {l.threshold} hands
+                    </span>
+                  </div>
+                  {unlocksGames.length > 0 && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Unlocks {unlocksGames.map((u) => GAME_LABELS[u.game]).join(", ")} VIP
+                    </div>
+                  )}
+                </div>
+                {reached && <Sparkles className="w-4 h-4 text-primary shrink-0" />}
+              </div>
+            );
+          })}
+        </div>
       </section>
     </div>
   );

@@ -4,24 +4,32 @@ import { Dices, Coins, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useCasinoStore } from "@/lib/store";
+import { isVipUnlocked } from "@/lib/levels";
+import { VipToggle } from "@/components/VipToggle";
 import { cn } from "@/lib/utils";
 
-const HOUSE_EDGE = 0.01;
+const HOUSE_EDGE_STD = 0.01;
+const HOUSE_EDGE_VIP = 0.005;
 
 export default function Dice() {
-  const { balance, placeBet } = useCasinoStore();
+  const { balance, placeBet, stats } = useCasinoStore();
   const [bet, setBet] = useState(25);
   const [target, setTarget] = useState(50);
   const [direction, setDirection] = useState<"over" | "under">("over");
   const [rolling, setRolling] = useState(false);
   const [lastRoll, setLastRoll] = useState<number | null>(null);
   const [lastWin, setLastWin] = useState<boolean | null>(null);
+  const vipUnlocked = isVipUnlocked("dice", stats.handsPlayed);
+  const [isVip, setIsVip] = useState(false);
+  const effectiveVip = isVip && vipUnlocked;
+  const houseEdge = effectiveVip ? HOUSE_EDGE_VIP : HOUSE_EDGE_STD;
+  const maxBet = effectiveVip ? 1000 : 500;
 
   // Win chance: under -> roll < target, over -> roll > target
   // We use 1-100 inclusive, target is exclusive boundary.
   const winChance =
     direction === "under" ? Math.max(1, target - 1) : Math.max(1, 100 - target);
-  const multiplier = +(((1 - HOUSE_EDGE) * 100) / winChance).toFixed(4);
+  const multiplier = +(((1 - houseEdge) * 100) / winChance).toFixed(4);
   const potentialPayout = Math.floor(bet * multiplier);
 
   const canRoll = balance >= bet && !rolling && winChance >= 1 && winChance <= 99;
@@ -46,11 +54,14 @@ export default function Dice() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
-      <div className="text-center">
-        <div className="text-xs uppercase tracking-[0.3em] text-primary/70 mb-2">
-          1% House Edge · Pick Your Risk
+      <div className="text-center space-y-3">
+        <div className="text-xs uppercase tracking-[0.3em] text-primary/70">
+          {(houseEdge * 100).toFixed(1)}% House Edge · Pick Your Risk
         </div>
         <h1 className="font-serif text-4xl casino-gradient-text">Over / Under</h1>
+        <div className="flex justify-center">
+          <VipToggle game="dice" isVip={isVip} onChange={setIsVip} disabled={rolling} />
+        </div>
       </div>
 
       {/* Roll display */}
@@ -180,13 +191,13 @@ export default function Dice() {
         <Slider
           value={[bet]}
           min={1}
-          max={Math.max(1, Math.min(500, balance))}
+          max={Math.max(1, Math.min(maxBet, balance))}
           step={1}
           onValueChange={(v) => setBet(v[0])}
           disabled={rolling || balance === 0}
         />
         <div className="flex gap-2">
-          {[10, 25, 50, 100].map((p) => (
+          {(effectiveVip ? [50, 100, 250, 500] : [10, 25, 50, 100]).map((p) => (
             <Button
               key={p}
               size="sm"

@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { Coins, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCasinoStore } from "@/lib/store";
+import { isVipUnlocked } from "@/lib/levels";
+import { VipToggle } from "@/components/VipToggle";
 import { cn } from "@/lib/utils";
 
 const RED_NUMBERS = new Set([
@@ -33,18 +35,20 @@ interface PlacedBet {
   label: string;
 }
 
-const CHIP_VALUES = [5, 10, 25, 100];
+const CHIP_VALUES_STD = [5, 10, 25, 100];
+const CHIP_VALUES_VIP = [25, 50, 100, 250];
 
 function colorOf(n: number): "red" | "black" | "green" {
   if (n === 0) return "green";
   return RED_NUMBERS.has(n) ? "red" : "black";
 }
 
-function payoutFor(type: BetType, n: number, amount: number): number {
+function payoutFor(type: BetType, n: number, amount: number, vip: boolean): number {
   // Returns total returned to player (stake + winnings) on win, 0 on loss
   switch (type.kind) {
     case "number":
-      return n === type.value ? amount * 36 : 0; // 35:1 + stake = 36x
+      // Standard: 35:1 + stake = 36x. VIP: 36:1 + stake = 37x.
+      return n === type.value ? amount * (vip ? 37 : 36) : 0;
     case "red":
       return n !== 0 && colorOf(n) === "red" ? amount * 2 : 0;
     case "black":
@@ -127,12 +131,21 @@ function BetSpot({ label, amount, onPlace, className, children }: Omit<BetSpotPr
 }
 
 export default function Roulette() {
-  const { balance, placeBet } = useCasinoStore();
+  const { balance, placeBet, stats } = useCasinoStore();
+  const vipUnlocked = isVipUnlocked("roulette", stats.handsPlayed);
+  const [isVip, setIsVip] = useState(false);
+  const effectiveVip = isVip && vipUnlocked;
+  const chipValues = effectiveVip ? CHIP_VALUES_VIP : CHIP_VALUES_STD;
   const [chipValue, setChipValue] = useState(5);
   const [bets, setBets] = useState<Map<string, PlacedBet>>(new Map());
   const [spinning, setSpinning] = useState(false);
   const [resultNumber, setResultNumber] = useState<number | null>(null);
   const [wheelRotation, setWheelRotation] = useState(0);
+
+  // Reset chip value when toggling VIP if current value isn't in the new set
+  if (!chipValues.includes(chipValue)) {
+    setChipValue(chipValues[0]);
+  }
 
   const totalBet = useMemo(
     () => Array.from(bets.values()).reduce((s, b) => s + b.amount, 0),
@@ -175,7 +188,7 @@ export default function Roulette() {
 
     setTimeout(() => {
       const totalReturn = Array.from(bets.values()).reduce(
-        (sum, b) => sum + payoutFor(b.type, winning, b.amount),
+        (sum, b) => sum + payoutFor(b.type, winning, b.amount, effectiveVip),
         0,
       );
       placeBet("roulette", totalBet, totalReturn);
@@ -199,11 +212,19 @@ export default function Roulette() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="text-center">
-        <div className="text-xs uppercase tracking-[0.3em] text-primary/70 mb-2">
-          European · Single Zero
+      <div className="text-center space-y-3">
+        <div className="text-xs uppercase tracking-[0.3em] text-primary/70">
+          European · Single Zero · Straight pays {effectiveVip ? "36:1" : "35:1"}
         </div>
         <h1 className="font-serif text-4xl casino-gradient-text">Roulette</h1>
+        <div className="flex justify-center">
+          <VipToggle
+            game="roulette"
+            isVip={isVip}
+            onChange={setIsVip}
+            disabled={spinning || bets.size > 0}
+          />
+        </div>
       </div>
 
       {/* Wheel */}
@@ -392,7 +413,7 @@ export default function Roulette() {
           </div>
         </div>
         <div className="flex items-center justify-center gap-4">
-          {CHIP_VALUES.map((v) => (
+          {chipValues.map((v) => (
             <Chip
               key={v}
               value={v}

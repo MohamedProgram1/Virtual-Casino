@@ -4,6 +4,8 @@ import { Spade, Heart, Diamond, Club, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useCasinoStore } from "@/lib/store";
+import { isVipUnlocked } from "@/lib/levels";
+import { VipToggle } from "@/components/VipToggle";
 import { cn } from "@/lib/utils";
 
 type Suit = "S" | "H" | "D" | "C";
@@ -107,7 +109,7 @@ function PlayingCard({ card, hidden, index }: { card?: Card; hidden?: boolean; i
 type GamePhase = "betting" | "playing" | "dealer" | "done";
 
 export default function Blackjack() {
-  const { balance, placeBet } = useCasinoStore();
+  const { balance, placeBet, stats } = useCasinoStore();
   const [bet, setBet] = useState(25);
   const [deck, setDeck] = useState<Card[]>([]);
   const [player, setPlayer] = useState<Card[]>([]);
@@ -116,6 +118,10 @@ export default function Blackjack() {
   const [message, setMessage] = useState<string>("");
   const [hasDoubled, setHasDoubled] = useState(false);
   const [activeBet, setActiveBet] = useState(0);
+  const vipUnlocked = isVipUnlocked("blackjack", stats.handsPlayed);
+  const [isVip, setIsVip] = useState(false);
+  const effectiveVip = isVip && vipUnlocked;
+  const maxBet = effectiveVip ? 1000 : 500;
 
   const playerTotal = handTotal(player);
   const dealerTotal = handTotal(dealer);
@@ -213,8 +219,9 @@ export default function Blackjack() {
       payout = finalBet; // push
       msg = "Push. Both natural blackjack.";
     } else if (playerBJ) {
-      payout = Math.floor(finalBet * 2.5); // 3:2 means original + 1.5x
-      msg = "Blackjack! Pays 3 to 2.";
+      // Standard: pays 3:2 (returns 2.5x stake). VIP: pays 2:1 (returns 3x stake).
+      payout = effectiveVip ? finalBet * 3 : Math.floor(finalBet * 2.5);
+      msg = effectiveVip ? "Blackjack! Pays 2 to 1." : "Blackjack! Pays 3 to 2.";
     } else if (dealerBJ) {
       payout = 0;
       msg = "Dealer blackjack.";
@@ -250,11 +257,19 @@ export default function Blackjack() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="text-center">
-        <div className="text-xs uppercase tracking-[0.3em] text-primary/70 mb-2">
-          Single Deck · Dealer Stands on 17 · BJ pays 3:2
+      <div className="text-center space-y-3">
+        <div className="text-xs uppercase tracking-[0.3em] text-primary/70">
+          Single Deck · Dealer Stands on 17 · BJ pays {effectiveVip ? "2:1" : "3:2"}
         </div>
         <h1 className="font-serif text-4xl casino-gradient-text">Blackjack</h1>
+        <div className="flex justify-center">
+          <VipToggle
+            game="blackjack"
+            isVip={isVip}
+            onChange={setIsVip}
+            disabled={phase !== "betting"}
+          />
+        </div>
       </div>
 
       {/* Felt */}
@@ -338,13 +353,13 @@ export default function Blackjack() {
           <Slider
             value={[bet]}
             min={1}
-            max={Math.max(1, Math.min(500, balance))}
+            max={Math.max(1, Math.min(maxBet, balance))}
             step={1}
             onValueChange={(v) => setBet(v[0])}
             disabled={balance === 0}
           />
           <div className="flex gap-2">
-            {[10, 25, 50, 100].map((p) => (
+            {(effectiveVip ? [50, 100, 250, 500] : [10, 25, 50, 100]).map((p) => (
               <Button
                 key={p}
                 size="sm"

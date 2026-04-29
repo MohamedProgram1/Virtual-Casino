@@ -1,9 +1,11 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Coins, Crown, History as HistoryIcon, Settings as SettingsIcon, ArrowLeft, Sparkles } from "lucide-react";
+import { Coins, Crown, History as HistoryIcon, Settings as SettingsIcon, ArrowLeft, Sparkles, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCasinoStore } from "@/lib/store";
+import { getLevelFor, getNextLevel } from "@/lib/levels";
 import { cn } from "@/lib/utils";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -51,6 +53,46 @@ function ChipBalance() {
   );
 }
 
+function LevelBadge() {
+  const { stats } = useCasinoStore();
+  const level = getLevelFor(stats.handsPlayed);
+  const next = getNextLevel(stats.handsPlayed);
+  const progress = next
+    ? ((stats.handsPlayed - level.threshold) /
+        (next.threshold - level.threshold)) *
+      100
+    : 100;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/25 bg-card/40 cursor-default">
+          <Award className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-semibold text-foreground">
+            {level.name}
+          </span>
+          <div className="w-12 h-1 rounded-full bg-background overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-primary/60 to-primary"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        {next ? (
+          <span>
+            {next.threshold - stats.handsPlayed} hands to{" "}
+            <span className="text-primary">{next.name}</span>
+          </span>
+        ) : (
+          <span>Highest tier reached.</span>
+        )}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export default function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const pageTitle = PAGE_TITLES[location] ?? "Lucky Vault";
@@ -83,6 +125,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <LevelBadge />
             <ChipBalance />
             <div className="hidden sm:flex items-center gap-1">
               <Link href="/history">

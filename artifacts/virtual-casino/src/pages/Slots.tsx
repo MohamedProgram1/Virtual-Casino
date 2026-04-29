@@ -11,6 +11,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useCasinoStore } from "@/lib/store";
+import { isVipUnlocked } from "@/lib/levels";
+import { VipToggle } from "@/components/VipToggle";
 
 type SymbolDef = {
   id: string;
@@ -42,18 +44,19 @@ function pickSymbol(): SymbolDef {
   return SYMBOLS[0];
 }
 
-function calculatePayout(reels: SymbolDef[], bet: number): number {
+function calculatePayout(reels: SymbolDef[], bet: number, vipMultiplier: number): number {
   if (reels[0].id === reels[1].id && reels[1].id === reels[2].id) {
-    return reels[0].payout3 * bet;
+    return reels[0].payout3 * bet * vipMultiplier;
   }
   // 2-of-a-kind only for cherries on adjacent reels (positions 0-1)
   if (reels[0].id === "cherry" && reels[1].id === "cherry") {
-    return SYMBOLS[0].payout2 * bet;
+    return SYMBOLS[0].payout2 * bet * vipMultiplier;
   }
   return 0;
 }
 
-const BET_PRESETS = [10, 25, 50, 100];
+const BET_PRESETS_STD = [10, 25, 50, 100];
+const BET_PRESETS_VIP = [50, 100, 250, 500];
 
 interface ReelProps {
   finalSymbol: SymbolDef;
@@ -117,11 +120,17 @@ function Reel({ finalSymbol, spinning, delay }: ReelProps) {
 }
 
 export default function Slots() {
-  const { balance, placeBet } = useCasinoStore();
+  const { balance, placeBet, stats } = useCasinoStore();
   const [bet, setBet] = useState(25);
   const [reels, setReels] = useState<SymbolDef[]>([SYMBOLS[0], SYMBOLS[1], SYMBOLS[2]]);
   const [spinning, setSpinning] = useState(false);
   const [lastWin, setLastWin] = useState<number | null>(null);
+  const vipUnlocked = isVipUnlocked("slots", stats.handsPlayed);
+  const [isVip, setIsVip] = useState(false);
+  const effectiveVip = isVip && vipUnlocked;
+  const vipMultiplier = effectiveVip ? 2 : 1;
+  const maxBet = effectiveVip ? 1000 : 500;
+  const presets = effectiveVip ? BET_PRESETS_VIP : BET_PRESETS_STD;
 
   const canSpin = balance >= bet && !spinning;
 
@@ -132,7 +141,7 @@ export default function Slots() {
     setSpinning(true);
     setLastWin(null);
 
-    const payout = calculatePayout(result, bet);
+    const payout = calculatePayout(result, bet, vipMultiplier);
 
     setTimeout(() => {
       setSpinning(false);
@@ -143,11 +152,14 @@ export default function Slots() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
-      <div className="text-center">
-        <div className="text-xs uppercase tracking-[0.3em] text-primary/70 mb-2">
-          Three Reels of Fortune
+      <div className="text-center space-y-3">
+        <div className="text-xs uppercase tracking-[0.3em] text-primary/70">
+          {effectiveVip ? "Doubled Paytable · Higher Limits" : "Three Reels of Fortune"}
         </div>
         <h1 className="font-serif text-4xl casino-gradient-text">Lucky Reels</h1>
+        <div className="flex justify-center">
+          <VipToggle game="slots" isVip={isVip} onChange={setIsVip} disabled={spinning} />
+        </div>
       </div>
 
       {/* Machine */}
@@ -187,13 +199,13 @@ export default function Slots() {
           <Slider
             value={[bet]}
             min={1}
-            max={Math.max(1, Math.min(500, balance))}
+            max={Math.max(1, Math.min(maxBet, balance))}
             step={1}
             onValueChange={(v) => setBet(v[0])}
             disabled={spinning || balance === 0}
           />
           <div className="flex gap-2">
-            {BET_PRESETS.map((preset) => (
+            {presets.map((preset) => (
               <Button
                 key={preset}
                 size="sm"
@@ -209,7 +221,7 @@ export default function Slots() {
               size="sm"
               variant="outline"
               disabled={spinning || balance === 0}
-              onClick={() => setBet(Math.min(balance, 500))}
+              onClick={() => setBet(Math.min(balance, maxBet))}
               className="flex-1 border-primary/30 text-foreground hover:bg-primary/10"
             >
               Max
@@ -244,6 +256,11 @@ export default function Slots() {
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-2">
+              {effectiveVip && (
+                <div className="text-xs uppercase tracking-wider text-primary mb-2 text-center">
+                  VIP table — all payouts doubled
+                </div>
+              )}
               {SYMBOLS.slice()
                 .sort((a, b) => b.payout3 - a.payout3)
                 .map((sym) => (
@@ -257,7 +274,7 @@ export default function Slots() {
                         {sym.id} × 3
                       </span>
                     </div>
-                    <span className="font-mono text-primary">{sym.payout3}× bet</span>
+                    <span className="font-mono text-primary">{sym.payout3 * vipMultiplier}× bet</span>
                   </div>
                 ))}
               <div className="flex items-center justify-between p-3 rounded-lg bg-background/40 border border-primary/10">
@@ -265,7 +282,7 @@ export default function Slots() {
                   <Cherry className="w-6 h-6 text-rose-400" />
                   <span className="text-sm">cherry × 2 (left)</span>
                 </div>
-                <span className="font-mono text-primary">1× bet</span>
+                <span className="font-mono text-primary">{1 * vipMultiplier}× bet</span>
               </div>
             </div>
           </DialogContent>
