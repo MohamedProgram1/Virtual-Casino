@@ -146,7 +146,9 @@ export default function Slots() {
     setTimeout(() => {
       setSpinning(false);
       setLastWin(payout);
-      placeBet("slots", bet, payout);
+      placeBet("slots", bet, payout, {
+        multiplier: bet > 0 ? payout / bet : 0,
+      });
     }, 2200);
   };
 

@@ -90,7 +90,7 @@ export default function Plinko() {
     // Wait for drop animation, then settle
     const animDuration = 1900;
     setTimeout(() => {
-      placeBet("plinko", bet, payout);
+      placeBet("plinko", bet, payout, { multiplier: mult });
       setLastResult({ slot, mult, payout, bet });
       setBusy(false);
       // Clean up old drops

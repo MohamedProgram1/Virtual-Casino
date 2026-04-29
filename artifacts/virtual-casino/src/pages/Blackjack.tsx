@@ -256,7 +256,9 @@ export default function Blackjack() {
     }
 
     setMessage(msg);
-    placeBet("blackjack", finalBet, payout);
+    const meta =
+      playerBJ && !dealerBJ ? { special: "natural" } : undefined;
+    placeBet("blackjack", finalBet, payout, meta);
   };
 
   const reset = () => {

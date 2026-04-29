@@ -1,23 +1,47 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Coins, Crown, History as HistoryIcon, Settings as SettingsIcon, ArrowLeft, Sparkles, Award } from "lucide-react";
+import {
+  Coins,
+  Crown,
+  History as HistoryIcon,
+  Settings as SettingsIcon,
+  ArrowLeft,
+  Sparkles,
+  Award,
+  KeyRound,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCasinoStore } from "@/lib/store";
 import { getLevelFor, getNextLevel } from "@/lib/levels";
+import { getAchievement } from "@/lib/achievements";
+import { GAME_LABELS } from "@/lib/games";
 import { cn } from "@/lib/utils";
 
-const PAGE_TITLES: Record<string, string> = {
+const STATIC_TITLES: Record<string, string> = {
   "/": "The Lobby",
-  "/slots": "Slots",
-  "/blackjack": "Blackjack",
-  "/roulette": "Roulette",
-  "/dice": "Dice",
-  "/plinko": "Plinko",
-  "/mines": "Mines",
   "/history": "History",
   "/settings": "Settings",
+};
+
+const GAME_PAGE_TITLES: Record<string, string> = {
+  "/slots": GAME_LABELS.slots,
+  "/blackjack": GAME_LABELS.blackjack,
+  "/roulette": GAME_LABELS.roulette,
+  "/dice": GAME_LABELS.dice,
+  "/plinko": GAME_LABELS.plinko,
+  "/mines": GAME_LABELS.mines,
+  "/crash": GAME_LABELS.crash,
+  "/wheel": GAME_LABELS.wheel,
+  "/hilo": GAME_LABELS.hilo,
+  "/keno": GAME_LABELS.keno,
+  "/owner-vault": GAME_LABELS.ownerVault,
+};
+
+const PAGE_TITLES: Record<string, string> = {
+  ...STATIC_TITLES,
+  ...GAME_PAGE_TITLES,
 };
 
 function ChipBalance() {
@@ -52,6 +76,29 @@ function ChipBalance() {
         </Button>
       )}
     </div>
+  );
+}
+
+function TitleBadge() {
+  const { equippedTitle } = useCasinoStore();
+  if (!equippedTitle) return null;
+  const a = getAchievement(equippedTitle);
+  if (!a) return null;
+  const Icon = a.icon;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-400/40 bg-gradient-to-b from-amber-300/15 to-amber-700/10 cursor-default">
+          <Icon className="w-3.5 h-3.5 text-amber-300" />
+          <span className="text-xs font-semibold text-amber-100 tracking-wide">
+            {a.name}
+          </span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="text-xs">{a.description}</span>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -95,6 +142,23 @@ function LevelBadge() {
   );
 }
 
+function OwnerBadge() {
+  const { ownerMode } = useCasinoStore();
+  if (!ownerMode) return null;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full border border-amber-400/50 bg-gradient-to-b from-amber-400/20 to-amber-700/15">
+          <KeyRound className="w-3.5 h-3.5 text-amber-300" />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="text-xs">Owner mode active</span>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export default function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const pageTitle = PAGE_TITLES[location] ?? "Lucky Vault";
@@ -127,7 +191,9 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <TitleBadge />
             <LevelBadge />
+            <OwnerBadge />
             <ChipBalance />
             <div className="hidden sm:flex items-center gap-1">
               <Link href="/history">

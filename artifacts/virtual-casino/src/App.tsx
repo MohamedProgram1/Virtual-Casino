@@ -11,6 +11,11 @@ import Roulette from "@/pages/Roulette";
 import Dice from "@/pages/Dice";
 import Plinko from "@/pages/Plinko";
 import Mines from "@/pages/Mines";
+import Crash from "@/pages/Crash";
+import Wheel from "@/pages/Wheel";
+import HiLo from "@/pages/HiLo";
+import Keno from "@/pages/Keno";
+import OwnerVault from "@/pages/OwnerVault";
 import History from "@/pages/History";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
@@ -28,6 +33,11 @@ function Router() {
         <Route path="/dice" component={Dice} />
         <Route path="/plinko" component={Plinko} />
         <Route path="/mines" component={Mines} />
+        <Route path="/crash" component={Crash} />
+        <Route path="/wheel" component={Wheel} />
+        <Route path="/hilo" component={HiLo} />
+        <Route path="/keno" component={Keno} />
+        <Route path="/owner-vault" component={OwnerVault} />
         <Route path="/history" component={History} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />

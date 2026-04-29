@@ -48,7 +48,7 @@ export default function Dice() {
       setLastRoll(result);
       setLastWin(won);
       setRolling(false);
-      placeBet("dice", bet, payout);
+      placeBet("dice", bet, payout, { multiplier });
     }, 1100);
   };
 

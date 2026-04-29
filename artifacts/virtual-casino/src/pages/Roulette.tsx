@@ -191,7 +191,15 @@ export default function Roulette() {
         (sum, b) => sum + payoutFor(b.type, winning, b.amount, effectiveVip),
         0,
       );
-      placeBet("roulette", totalBet, totalReturn);
+      const straightHit = Array.from(bets.values()).some(
+        (b) => b.type.kind === "number" && b.type.value === winning,
+      );
+      placeBet(
+        "roulette",
+        totalBet,
+        totalReturn,
+        straightHit ? { special: "roulette-straight" } : undefined,
+      );
       setResultNumber(winning);
       setSpinning(false);
       setBets(new Map());

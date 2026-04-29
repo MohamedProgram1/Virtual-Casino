@@ -2,16 +2,8 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown, Trophy, Coins, Dices, Wallet } from "lucide-react";
 import { useCasinoStore, GameType } from "@/lib/store";
+import { GAME_LABELS } from "@/lib/games";
 import { cn } from "@/lib/utils";
-
-const GAME_LABELS: Record<GameType, string> = {
-  plinko: "Plinko",
-  mines: "Mines",
-  slots: "Slots",
-  blackjack: "Blackjack",
-  roulette: "Roulette",
-  dice: "Dice",
-};
 
 function formatTime(ts: number): string {
   return new Date(ts).toLocaleString(undefined, {

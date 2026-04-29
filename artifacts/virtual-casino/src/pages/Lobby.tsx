@@ -1,10 +1,6 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import {
-  Dices,
-  Spade,
-  CircleDot,
-  Cherry,
   TrendingUp,
   TrendingDown,
   Trophy,
@@ -12,75 +8,103 @@ import {
   Award,
   Lock,
   Sparkles,
-  Circle,
-  Bomb,
+  Dices,
+  Target,
+  CheckCircle2,
+  KeyRound,
 } from "lucide-react";
 import { useCasinoStore, GameType } from "@/lib/store";
-import { getLevelFor, getNextLevel, isVipUnlocked, hasVipVariant, VIP_UNLOCKS, LEVELS } from "@/lib/levels";
+import {
+  getLevelFor,
+  getNextLevel,
+  isVipUnlocked,
+  hasVipVariant,
+  VIP_UNLOCKS,
+  LEVELS,
+} from "@/lib/levels";
+import { GAME_LABELS, GAME_ROUTES, GAME_ICONS } from "@/lib/games";
+import {
+  ALL_ACHIEVEMENTS,
+  RARITY_STYLES,
+  getAchievement,
+} from "@/lib/achievements";
 import { cn } from "@/lib/utils";
 
-const GAMES: Array<{
+interface GameCard {
   id: GameType;
-  href: string;
-  title: string;
   tagline: string;
   blurb: string;
-  icon: typeof Dices;
   accent: string;
-}> = [
+  ownerOnly?: boolean;
+}
+
+const GAME_CARDS: GameCard[] = [
   {
     id: "slots",
-    href: "/slots",
-    title: "Lucky Reels",
     tagline: "Three reels. One pull. Endless thrill.",
     blurb: "Classic mechanical slots with a payout table that actually pays.",
-    icon: Cherry,
     accent: "from-rose-500/20 to-amber-500/10",
   },
   {
     id: "blackjack",
-    href: "/blackjack",
-    title: "Blackjack",
     tagline: "You vs. the house. Twenty-one wins.",
     blurb: "Single deck. Dealer hits soft 17. Naturals pay three to two.",
-    icon: Spade,
     accent: "from-emerald-500/20 to-emerald-900/10",
   },
   {
     id: "roulette",
-    href: "/roulette",
-    title: "European Roulette",
     tagline: "One zero. Infinite ways to bet.",
     blurb: "Place chips on red, black, columns, dozens, or a single number.",
-    icon: CircleDot,
     accent: "from-red-700/25 to-red-900/10",
   },
   {
     id: "dice",
-    href: "/dice",
-    title: "Over / Under",
     tagline: "Pick your number. Pick your edge.",
     blurb: "Slide the target — the multiplier moves with the risk.",
-    icon: Dices,
     accent: "from-violet-500/20 to-indigo-900/10",
   },
   {
     id: "plinko",
-    href: "/plinko",
-    title: "Plinko",
     tagline: "Drop the ball. Let physics decide.",
     blurb: "Twelve rows of pegs. Three risk modes. Edges pay big.",
-    icon: Circle,
     accent: "from-amber-500/20 to-yellow-900/10",
   },
   {
     id: "mines",
-    href: "/mines",
-    title: "Mines",
     tagline: "Find the gems. Avoid the bombs.",
-    blurb: "Five-by-five grid. The longer you press your luck, the bigger the prize.",
-    icon: Bomb,
+    blurb: "Five-by-five grid. Press your luck for the bigger prize.",
     accent: "from-zinc-500/20 to-rose-900/10",
+  },
+  {
+    id: "crash",
+    tagline: "The rocket climbs. Cash out before it falls.",
+    blurb: "Pick your moment. Get greedy and lose it all.",
+    accent: "from-cyan-500/20 to-sky-900/10",
+  },
+  {
+    id: "wheel",
+    tagline: "One spin. Sixteen slices. Pure fortune.",
+    blurb: "Land on a multiplier from a dud to the elusive top prize.",
+    accent: "from-fuchsia-500/20 to-purple-900/10",
+  },
+  {
+    id: "hilo",
+    tagline: "Higher or lower? Read the cards.",
+    blurb: "Stack a streak of correct calls for a soaring multiplier.",
+    accent: "from-teal-500/20 to-emerald-900/10",
+  },
+  {
+    id: "keno",
+    tagline: "Pick four. Cross your fingers.",
+    blurb: "Eight numbers drawn from forty. Hit all four for the jackpot.",
+    accent: "from-indigo-500/20 to-blue-900/10",
+  },
+  {
+    id: "ownerVault",
+    tagline: "The owner's private game. Edge always yours.",
+    blurb: "One of five vaults holds the prize. Pick it and double your bet.",
+    accent: "from-amber-400/30 to-amber-900/15",
+    ownerOnly: true,
   },
 ];
 
@@ -93,15 +117,6 @@ function formatRelative(ts: number): string {
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
 }
-
-const GAME_LABELS: Record<GameType, string> = {
-  slots: "Slots",
-  blackjack: "Blackjack",
-  roulette: "Roulette",
-  dice: "Dice",
-  plinko: "Plinko",
-  mines: "Mines",
-};
 
 function ActivityTicker() {
   const { history } = useCasinoStore();
@@ -150,7 +165,6 @@ function ActivityTicker() {
                   isWin ? "text-emerald-400" : isPush ? "text-muted-foreground" : "text-rose-500"
                 }`}
               >
-                {isWin ? "+" : isPush ? "" : ""}
                 {net === 0 ? "push" : net > 0 ? `+${net}` : `${net}`}
               </span>
               <span className="text-xs text-muted-foreground hidden sm:inline">
@@ -241,8 +255,163 @@ function LevelProgress() {
   );
 }
 
+function DailyChallenges() {
+  const { dailyChallenges } = useCasinoStore();
+  return (
+    <section>
+      <div className="flex items-end justify-between mb-5">
+        <div>
+          <h2 className="font-serif text-2xl flex items-center gap-2">
+            <Target className="w-5 h-5 text-primary" />
+            Daily Challenges
+          </h2>
+          <div className="text-xs text-muted-foreground mt-1">
+            Resets at midnight · Rewards auto-credited
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {dailyChallenges.challenges.map((c) => {
+          const pct = Math.min(100, (c.progress / c.metric.goal) * 100);
+          const done = c.claimed;
+          return (
+            <div
+              key={c.id}
+              className={cn(
+                "casino-card p-4 relative overflow-hidden",
+                done && "border-emerald-500/40",
+              )}
+            >
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="text-sm font-medium leading-tight">
+                  {c.description}
+                </div>
+                {done ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                ) : (
+                  <Sparkles className="w-4 h-4 text-primary/60 shrink-0" />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-1.5 rounded-full bg-background overflow-hidden border border-primary/10">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className={cn(
+                      "h-full",
+                      done
+                        ? "bg-gradient-to-r from-emerald-500 to-emerald-300"
+                        : "bg-gradient-to-r from-primary/50 to-primary",
+                    )}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-mono text-muted-foreground tabular-nums">
+                    {Math.min(c.progress, c.metric.goal)} / {c.metric.goal}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-mono",
+                      done ? "text-emerald-400" : "text-primary/80",
+                    )}
+                  >
+                    {done ? "Claimed" : `+${c.reward} chips`}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function AchievementsWidget() {
+  const { achievements, equippedTitle } = useCasinoStore();
+  const unlocked = achievements
+    .map((id) => getAchievement(id))
+    .filter((a): a is NonNullable<ReturnType<typeof getAchievement>> => Boolean(a));
+
+  const total = ALL_ACHIEVEMENTS.length;
+  const recent = unlocked.slice(-6).reverse();
+
+  return (
+    <section>
+      <div className="flex items-end justify-between mb-5">
+        <div>
+          <h2 className="font-serif text-2xl flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-primary" />
+            Titles & Achievements
+          </h2>
+          <div className="text-xs text-muted-foreground mt-1">
+            {unlocked.length} of {total} unlocked
+            {equippedTitle && (
+              <>
+                {" · "}
+                Wearing{" "}
+                <span className="text-primary">
+                  {getAchievement(equippedTitle)?.name}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+        <Link href="/settings">
+          <button className="text-xs text-primary/70 hover:text-primary uppercase tracking-wider">
+            Manage
+          </button>
+        </Link>
+      </div>
+      {recent.length === 0 ? (
+        <div className="text-sm text-muted-foreground italic">
+          No titles yet. Play a few hands and they'll start rolling in.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {recent.map((a) => {
+            const styles = RARITY_STYLES[a.rarity];
+            const Icon = a.icon;
+            return (
+              <div
+                key={a.id}
+                className={cn(
+                  "rounded-xl p-3 border bg-gradient-to-b border-primary/15 text-center",
+                  styles.bg,
+                )}
+              >
+                <div
+                  className={cn(
+                    "w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-2 ring-2",
+                    styles.ring,
+                    "bg-background/40",
+                  )}
+                >
+                  <Icon className={cn("w-5 h-5", styles.color)} />
+                </div>
+                <div className="text-xs font-semibold truncate">{a.name}</div>
+                <div
+                  className={cn(
+                    "text-[10px] uppercase tracking-wider mt-0.5",
+                    styles.color,
+                  )}
+                >
+                  {styles.label}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function Lobby() {
-  const { stats, balance } = useCasinoStore();
+  const { stats, balance, ownerMode } = useCasinoStore();
+
+  const visibleGames = GAME_CARDS.filter((g) => !g.ownerOnly || ownerMode);
 
   return (
     <div className="space-y-10">
@@ -280,41 +449,71 @@ export default function Lobby() {
         />
       </section>
 
+      {/* Daily Challenges */}
+      <DailyChallenges />
+
       {/* Games */}
       <section>
         <div className="flex items-end justify-between mb-5">
           <h2 className="font-serif text-2xl">Tonight's Tables</h2>
           <span className="text-xs text-muted-foreground uppercase tracking-wider">
-            All open
+            {visibleGames.length} open
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {GAMES.map((game, i) => {
+          {visibleGames.map((game, i) => {
             const unlock = VIP_UNLOCKS[game.id];
             const hasVip = hasVipVariant(game.id);
             const vipUnlocked = isVipUnlocked(game.id, stats.handsPlayed);
             const requiredLevel = unlock
               ? LEVELS.find((l) => l.level === unlock.unlockLevel)
               : null;
+            const Icon = GAME_ICONS[game.id];
+            const isOwner = !!game.ownerOnly;
             return (
               <motion.div
                 key={game.id}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 + i * 0.06 }}
+                transition={{ delay: 0.05 + i * 0.04 }}
               >
-                <Link href={game.href}>
-                  <div className="group relative casino-card p-6 cursor-pointer hover:border-primary/40 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(212,175,55,0.15)]">
+                <Link href={GAME_ROUTES[game.id]}>
+                  <div
+                    className={cn(
+                      "group relative casino-card p-6 cursor-pointer hover:border-primary/40 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_40px_rgba(212,175,55,0.15)]",
+                      isOwner && "border-amber-400/40",
+                    )}
+                  >
                     <div
                       className={`absolute inset-0 bg-gradient-to-br ${game.accent} opacity-60 pointer-events-none`}
                     />
                     <div className="relative flex items-start gap-4">
-                      <div className="w-14 h-14 rounded-xl bg-background/60 border border-primary/30 flex items-center justify-center shrink-0 group-hover:border-primary/60 transition-colors">
-                        <game.icon className="w-7 h-7 text-primary" />
+                      <div
+                        className={cn(
+                          "w-14 h-14 rounded-xl bg-background/60 border flex items-center justify-center shrink-0 transition-colors",
+                          isOwner
+                            ? "border-amber-400/60 group-hover:border-amber-300"
+                            : "border-primary/30 group-hover:border-primary/60",
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            "w-7 h-7",
+                            isOwner ? "text-amber-300" : "text-primary",
+                          )}
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                          <span className="font-serif text-xl">{game.title}</span>
+                          <span className="font-serif text-xl">
+                            {GAME_LABELS[game.id]}
+                          </span>
+                          {isOwner && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-b from-amber-400/30 to-amber-700/20 border border-amber-400/50 text-[10px] font-bold uppercase tracking-wider text-amber-200">
+                              <KeyRound className="w-2.5 h-2.5" />
+                              Owner
+                            </span>
+                          )}
                           {hasVip && vipUnlocked && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-b from-amber-300/30 to-primary/20 border border-primary/40 text-[10px] font-bold uppercase tracking-wider text-primary">
                               <Sparkles className="w-2.5 h-2.5" />
@@ -322,11 +521,7 @@ export default function Lobby() {
                             </span>
                           )}
                           {hasVip && !vipUnlocked && (
-                            <span
-                              className={cn(
-                                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-card/60 border border-muted-foreground/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground",
-                              )}
-                            >
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-card/60 border border-muted-foreground/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                               <Lock className="w-2.5 h-2.5" />
                               VIP @ {requiredLevel?.name}
                             </span>
@@ -335,7 +530,9 @@ export default function Lobby() {
                         <div className="text-sm text-primary/80 italic mb-2">
                           {game.tagline}
                         </div>
-                        <div className="text-sm text-muted-foreground">{game.blurb}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {game.blurb}
+                        </div>
                         {hasVip && vipUnlocked && unlock && (
                           <div className="text-xs text-primary/70 mt-2 italic">
                             VIP perk: {unlock.perk}
@@ -350,6 +547,9 @@ export default function Lobby() {
           })}
         </div>
       </section>
+
+      {/* Achievements */}
+      <AchievementsWidget />
 
       {/* Recent Activity */}
       <section>

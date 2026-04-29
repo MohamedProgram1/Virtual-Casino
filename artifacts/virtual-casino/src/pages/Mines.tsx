@@ -75,7 +75,11 @@ export default function Mines() {
       // Bust
       setExploded(i);
       setActive(false);
-      placeBet("mines", activeBet, 0);
+      placeBet("mines", activeBet, 0, {
+        multiplier: 0,
+        minesCount: activeMineCount,
+        minesCleared: revealed.size,
+      });
       setLastResult({ bet: activeBet, payout: 0, mult: 0, busted: true });
     } else {
       const next = new Set(revealed);
@@ -86,7 +90,12 @@ export default function Mines() {
         const finalMult = multiplierFor(next.size, activeMineCount);
         const finalPayout = Math.floor(activeBet * finalMult);
         setActive(false);
-        placeBet("mines", activeBet, finalPayout);
+        placeBet("mines", activeBet, finalPayout, {
+          multiplier: finalMult,
+          minesCount: activeMineCount,
+          minesCleared: next.size,
+          special: "mines-cleared",
+        });
         setLastResult({
           bet: activeBet,
           payout: finalPayout,
@@ -99,7 +108,11 @@ export default function Mines() {
 
   const cashOut = () => {
     if (!active || safeRevealed === 0) return;
-    placeBet("mines", activeBet, currentPayout);
+    placeBet("mines", activeBet, currentPayout, {
+      multiplier: currentMult,
+      minesCount: activeMineCount,
+      minesCleared: safeRevealed,
+    });
     setLastResult({
       bet: activeBet,
       payout: currentPayout,

@@ -13,6 +13,8 @@ export const LEVELS: Level[] = [
   { level: 3, name: "High Roller", threshold: 75, blurb: "Comped seats. Watched bets." },
   { level: 4, name: "VIP", threshold: 200, blurb: "A private elevator to the back room." },
   { level: 5, name: "Whale", threshold: 500, blurb: "The house keeps a tab in your name." },
+  { level: 6, name: "Legend", threshold: 1200, blurb: "Pit bosses straighten their ties." },
+  { level: 7, name: "Tycoon", threshold: 3000, blurb: "Your name is on the building." },
 ];
 
 export interface VipUnlock {
