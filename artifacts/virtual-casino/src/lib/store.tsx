@@ -64,6 +64,22 @@ export interface CasinoSettings {
   soundEnabled: boolean;
 }
 
+export interface ActiveBoost {
+  itemId: string;
+  name: string;
+  /** Applied to the *winnings* (payout − stake) of each winning bet. 1.5 = +50%. */
+  multiplier: number;
+  /** Number of upcoming bets the boost is consumed by. Decrements per bet. */
+  usesLeft: number;
+}
+
+export interface BarStats {
+  /** Total drinks served at the bar across the lifetime of the account. */
+  served: number;
+  /** Total tip chips earned from the bartending minigame. */
+  tipsEarned: number;
+}
+
 export interface CasinoState {
   balance: number;
   history: GameHistoryEvent[];
@@ -77,6 +93,11 @@ export interface CasinoState {
   ownerMode: boolean;
   dailyChallenges: DailyChallengeState;
   lowestBalance: number;
+  /** Map of shop / bar item id → quantity owned. */
+  inventory: Record<string, number>;
+  /** The currently active boost. Only one boost may be active at a time. */
+  activeBoost: ActiveBoost | null;
+  bar: BarStats;
 }
 
 interface CasinoContextType extends CasinoState {
@@ -93,6 +114,25 @@ interface CasinoContextType extends CasinoState {
   unlockOwner: (code: string) => boolean;
   lockOwner: () => void;
   equipTitle: (id: string | null) => void;
+  /** Buy an item with chips. Returns true on success. */
+  purchaseItem: (
+    item: { id: string; name: string; price: number },
+  ) => boolean;
+  /** Consume one of an inventory item, activating its boost. */
+  activateItem: (
+    item: {
+      id: string;
+      name: string;
+      multiplier: number;
+      uses: number;
+    },
+  ) => boolean;
+  /** Bar served a drink. Adds to bar stats, optionally tips chips and grants drink. */
+  serveDrink: (params: {
+    tipChips: number;
+    grantItemId?: string;
+    grantItemName?: string;
+  }) => void;
 }
 
 const STARTING_BALANCE = 1000;
@@ -117,6 +157,9 @@ const DEFAULT_STATE: CasinoState = {
   ownerMode: false,
   dailyChallenges: generateDailyChallenges(todayDate()),
   lowestBalance: STARTING_BALANCE,
+  inventory: {},
+  activeBoost: null,
+  bar: { served: 0, tipsEarned: 0 },
 };
 
 const STORAGE_KEY = "lucky_vault_casino_state";
@@ -137,6 +180,9 @@ function migrate(stored: Partial<CasinoState>): CasinoState {
     dailyChallenges:
       stored.dailyChallenges ?? generateDailyChallenges(todayDate()),
     lowestBalance: stored.lowestBalance ?? stored.balance ?? STARTING_BALANCE,
+    inventory: stored.inventory ?? {},
+    activeBoost: stored.activeBoost ?? null,
+    bar: { ...DEFAULT_STATE.bar, ...(stored.bar ?? {}) },
   };
 }
 
@@ -193,7 +239,30 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
       }
 
       const win = payout > amount;
-      const newBalance = prev.balance + payout - amount;
+
+      // Apply active boost to the *winnings* portion of a winning bet.
+      let effectivePayout = payout;
+      let bonusFromBoost = 0;
+      let nextActiveBoost = prev.activeBoost;
+      let boostJustExpired: ActiveBoost | null = null;
+      if (prev.activeBoost && prev.activeBoost.usesLeft > 0) {
+        if (win) {
+          const winnings = payout - amount;
+          bonusFromBoost = Math.round(
+            winnings * (prev.activeBoost.multiplier - 1),
+          );
+          effectivePayout = payout + bonusFromBoost;
+        }
+        const usesLeft = prev.activeBoost.usesLeft - 1;
+        if (usesLeft <= 0) {
+          boostJustExpired = prev.activeBoost;
+          nextActiveBoost = null;
+        } else {
+          nextActiveBoost = { ...prev.activeBoost, usesLeft };
+        }
+      }
+
+      const newBalance = prev.balance + effectivePayout - amount;
       const prevStreak = prev.winStreaks[game] ?? 0;
       const newStreak = win ? prevStreak + 1 : 0;
       const newStreaks = { ...prev.winStreaks, [game]: newStreak };
@@ -208,7 +277,7 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         id: Math.random().toString(36).substring(2, 9),
         game,
         bet: amount,
-        payout,
+        payout: effectivePayout,
         timestamp: Date.now(),
       };
 
@@ -216,15 +285,15 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
 
       const stats = {
         totalWagered: prev.stats.totalWagered + amount,
-        biggestWin: Math.max(prev.stats.biggestWin, payout),
+        biggestWin: Math.max(prev.stats.biggestWin, effectivePayout),
         handsPlayed: prev.stats.handsPlayed + 1,
       };
 
-      // Daily challenges
+      // Daily challenges (use the boosted payout so wins still count)
       const challengeInput = {
         game,
         amount,
-        payout,
+        payout: effectivePayout,
         win,
         newStreak,
         meta,
@@ -251,12 +320,12 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         challenges: updatedChallengeList,
       };
 
-      // Achievements
+      // Achievements (boost-aware so big-win titles still trigger)
       const ctx: AchievementContext = {
         prev,
         game,
         amount,
-        payout,
+        payout: effectivePayout,
         win,
         newStreak,
         meta,
@@ -279,19 +348,41 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
       const finalBalance = newBalance + bonusFromChallenges;
       const lowestBalance = Math.min(prev.lowestBalance, newBalance);
 
-      // Side-effect toasts (deferred)
-      if (payout > 0) {
-        if (amount > 0 && payout >= amount * 10) {
+      // Side-effect toasts (deferred). Use the boosted payout for the headline,
+      // but call out the bonus separately so the player sees what the drink did.
+      if (effectivePayout > 0) {
+        if (amount > 0 && effectivePayout >= amount * 10) {
           setTimeout(
-            () => toast.success(`MASSIVE WIN! +${payout - amount} chips`),
+            () =>
+              toast.success(
+                `MASSIVE WIN! +${effectivePayout - amount} chips`,
+                bonusFromBoost > 0
+                  ? { description: `Drink bonus +${bonusFromBoost}` }
+                  : undefined,
+              ),
             0,
           );
-        } else if (payout > amount) {
+        } else if (effectivePayout > amount) {
           setTimeout(
-            () => toast.success(`Winner! +${payout - amount} chips`),
+            () =>
+              toast.success(
+                `Winner! +${effectivePayout - amount} chips`,
+                bonusFromBoost > 0
+                  ? { description: `Drink bonus +${bonusFromBoost}` }
+                  : undefined,
+              ),
             0,
           );
         }
+      }
+      if (boostJustExpired) {
+        setTimeout(
+          () =>
+            toast(`${boostJustExpired!.name} faded`, {
+              description: "Mix or buy another to keep the magic going.",
+            }),
+          240,
+        );
       }
       newlyUnlocked.forEach((a, i) => {
         setTimeout(
@@ -322,6 +413,120 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         achievements,
         dailyChallenges,
         lowestBalance,
+        activeBoost: nextActiveBoost,
+      };
+    });
+  };
+
+  const purchaseItem = (item: {
+    id: string;
+    name: string;
+    price: number;
+  }): boolean => {
+    let success = false;
+    setState((prev) => {
+      if (prev.balance < item.price) {
+        setTimeout(() => toast.error("Not enough chips for that."), 0);
+        return prev;
+      }
+      success = true;
+      const inventory = {
+        ...prev.inventory,
+        [item.id]: (prev.inventory[item.id] ?? 0) + 1,
+      };
+      setTimeout(
+        () =>
+          toast.success(`Bought ${item.name}`, {
+            description: `−${item.price} chips · stashed in your tab`,
+          }),
+        0,
+      );
+      return {
+        ...prev,
+        balance: prev.balance - item.price,
+        inventory,
+      };
+    });
+    return success;
+  };
+
+  const activateItem = (item: {
+    id: string;
+    name: string;
+    multiplier: number;
+    uses: number;
+  }): boolean => {
+    let success = false;
+    setState((prev) => {
+      const owned = prev.inventory[item.id] ?? 0;
+      if (owned <= 0) {
+        setTimeout(() => toast.error("You don't have any of those."), 0);
+        return prev;
+      }
+      success = true;
+      const inventory = { ...prev.inventory, [item.id]: owned - 1 };
+      if (inventory[item.id] === 0) delete inventory[item.id];
+      const pct = Math.round((item.multiplier - 1) * 100);
+      setTimeout(
+        () =>
+          toast.success(`${item.name} activated`, {
+            description: `+${pct}% on next ${item.uses} win${item.uses === 1 ? "" : "s"}`,
+          }),
+        0,
+      );
+      return {
+        ...prev,
+        inventory,
+        activeBoost: {
+          itemId: item.id,
+          name: item.name,
+          multiplier: item.multiplier,
+          usesLeft: item.uses,
+        },
+      };
+    });
+    return success;
+  };
+
+  const serveDrink = (params: {
+    tipChips: number;
+    grantItemId?: string;
+    grantItemName?: string;
+  }) => {
+    setState((prev) => {
+      const inventory = { ...prev.inventory };
+      if (params.grantItemId) {
+        inventory[params.grantItemId] =
+          (inventory[params.grantItemId] ?? 0) + 1;
+      }
+      const newBal = prev.balance + params.tipChips;
+      if (params.tipChips > 0) {
+        setTimeout(
+          () =>
+            toast.success(`Tip jar: +${params.tipChips} chips`, {
+              description: params.grantItemName
+                ? `${params.grantItemName} added to your tab`
+                : undefined,
+            }),
+          0,
+        );
+      } else if (params.grantItemName) {
+        setTimeout(
+          () =>
+            toast(`${params.grantItemName} added to your tab`, {
+              description: "No tip — keep practicing.",
+            }),
+          0,
+        );
+      }
+      return {
+        ...prev,
+        balance: newBal,
+        inventory,
+        bar: {
+          served: prev.bar.served + 1,
+          tipsEarned: prev.bar.tipsEarned + Math.max(0, params.tipChips),
+        },
       };
     });
   };
@@ -437,6 +642,9 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         unlockOwner,
         lockOwner,
         equipTitle,
+        purchaseItem,
+        activateItem,
+        serveDrink,
       }}
     >
       {children}

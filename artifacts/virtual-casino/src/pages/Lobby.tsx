@@ -12,6 +12,8 @@ import {
   Target,
   CheckCircle2,
   KeyRound,
+  ShoppingBag,
+  Wine,
 } from "lucide-react";
 import { useCasinoStore, GameType } from "@/lib/store";
 import {
@@ -557,6 +559,79 @@ export default function Lobby() {
               </motion.div>
             );
           })}
+        </div>
+      </section>
+
+      {/* The Lounge — Bar + Store */}
+      <section>
+        <div className="flex items-end justify-between mb-5">
+          <h2 className="font-serif text-2xl">The Lounge</h2>
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">
+            Step away from the tables
+          </span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Link href="/bar">
+            <motion.div
+              whileHover={{ y: -3 }}
+              className="group relative casino-card p-6 cursor-pointer hover:border-primary/40 transition-all overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-rose-700/25 via-amber-700/15 to-amber-900/10 opacity-80 pointer-events-none" />
+              <div className="absolute -bottom-6 -right-4 opacity-25 group-hover:opacity-40 transition-opacity">
+                <Wine className="w-32 h-32 text-amber-300" />
+              </div>
+              <div className="relative flex items-start gap-4">
+                <div className="w-14 h-14 rounded-xl bg-background/60 border border-amber-400/40 flex items-center justify-center shrink-0 group-hover:border-amber-300 transition-colors">
+                  <Wine className="w-7 h-7 text-amber-300" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <span className="font-serif text-xl">The Bar</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-b from-rose-400/30 to-rose-700/20 border border-rose-400/50 text-[10px] font-bold uppercase tracking-wider text-rose-200">
+                      <Sparkles className="w-2.5 h-2.5" />
+                      Minigame
+                    </span>
+                  </div>
+                  <div className="text-sm text-primary/80 italic mb-2">
+                    Mix the drink. Earn the boost.
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Pour, stack, and serve cocktails. Nail the recipe and walk
+                    away with a multiplier for your next bet.
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </Link>
+
+          <Link href="/store">
+            <motion.div
+              whileHover={{ y: -3 }}
+              className="group relative casino-card p-6 cursor-pointer hover:border-primary/40 transition-all overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-emerald-700/10 to-zinc-900/10 opacity-80 pointer-events-none" />
+              <div className="absolute -bottom-6 -right-4 opacity-25 group-hover:opacity-40 transition-opacity">
+                <ShoppingBag className="w-32 h-32 text-emerald-300" />
+              </div>
+              <div className="relative flex items-start gap-4">
+                <div className="w-14 h-14 rounded-xl bg-background/60 border border-emerald-400/40 flex items-center justify-center shrink-0 group-hover:border-emerald-300 transition-colors">
+                  <ShoppingBag className="w-7 h-7 text-emerald-300" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <span className="font-serif text-xl">The Vault Store</span>
+                  </div>
+                  <div className="text-sm text-primary/80 italic mb-2">
+                    Spend chips. Get an edge.
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Cocktails and charms that boost the next win. Skip the
+                    bartending if you'd rather just pay for the ammo.
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </Link>
         </div>
       </section>
 

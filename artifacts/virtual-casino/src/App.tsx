@@ -19,6 +19,8 @@ import Keno from "@/pages/Keno";
 import CoinFlip from "@/pages/CoinFlip";
 import Scratch from "@/pages/Scratch";
 import OwnerVault from "@/pages/OwnerVault";
+import Store from "@/pages/Store";
+import Bar from "@/pages/Bar";
 import History from "@/pages/History";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
@@ -43,6 +45,8 @@ function Router() {
         <Route path="/coin-flip" component={CoinFlip} />
         <Route path="/scratch" component={Scratch} />
         <Route path="/owner-vault" component={OwnerVault} />
+        <Route path="/store" component={Store} />
+        <Route path="/bar" component={Bar} />
         <Route path="/history" component={History} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />

@@ -25,6 +25,8 @@ const STATIC_TITLES: Record<string, string> = {
   "/": "The Lobby",
   "/history": "History",
   "/settings": "Settings",
+  "/store": "The Vault Store",
+  "/bar": "The Back Room Bar",
 };
 
 const GAME_PAGE_TITLES: Record<string, string> = {
@@ -146,6 +148,39 @@ function LevelBadge() {
   );
 }
 
+function BoostBadge() {
+  const { activeBoost } = useCasinoStore();
+  if (!activeBoost) return null;
+  const pct = Math.round((activeBoost.multiplier - 1) * 100);
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <motion.div
+          key={`${activeBoost.itemId}-${activeBoost.usesLeft}`}
+          initial={{ scale: 1.15 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 400, damping: 18 }}
+          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-400/45 bg-gradient-to-b from-emerald-500/15 to-emerald-700/10 cursor-default"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+          <span className="text-xs font-semibold text-emerald-100">
+            +{pct}%
+          </span>
+          <span className="text-[10px] text-emerald-200/80 font-mono">
+            ×{activeBoost.usesLeft}
+          </span>
+        </motion.div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="text-xs">
+          {activeBoost.name} · {activeBoost.usesLeft} winning bet
+          {activeBoost.usesLeft === 1 ? "" : "s"} left
+        </span>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function OwnerBadge() {
   const { ownerMode } = useCasinoStore();
   if (!ownerMode) return null;
@@ -225,6 +260,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2 sm:gap-3">
             <TitleBadge />
             <LevelBadge />
+            <BoostBadge />
             <OwnerBadge />
             <ChipBalance />
             <div className="hidden sm:flex items-center gap-1">
