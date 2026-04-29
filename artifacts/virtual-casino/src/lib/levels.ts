@@ -21,7 +21,7 @@ export interface VipUnlock {
   perk: string;
 }
 
-export const VIP_UNLOCKS: Record<GameType, VipUnlock> = {
+export const VIP_UNLOCKS: Partial<Record<GameType, VipUnlock>> = {
   slots: {
     game: "slots",
     unlockLevel: 2,
@@ -61,5 +61,10 @@ export function getNextLevel(handsPlayed: number): Level | null {
 
 export function isVipUnlocked(game: GameType, handsPlayed: number): boolean {
   const unlock = VIP_UNLOCKS[game];
+  if (!unlock) return false;
   return getLevelFor(handsPlayed).level >= unlock.unlockLevel;
+}
+
+export function hasVipVariant(game: GameType): boolean {
+  return VIP_UNLOCKS[game] !== undefined;
 }

@@ -5,6 +5,8 @@ import { useCasinoStore, GameType } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 const GAME_LABELS: Record<GameType, string> = {
+  plinko: "Plinko",
+  mines: "Mines",
   slots: "Slots",
   blackjack: "Blackjack",
   roulette: "Roulette",

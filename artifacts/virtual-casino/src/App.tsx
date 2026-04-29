@@ -9,6 +9,8 @@ import Slots from "@/pages/Slots";
 import Blackjack from "@/pages/Blackjack";
 import Roulette from "@/pages/Roulette";
 import Dice from "@/pages/Dice";
+import Plinko from "@/pages/Plinko";
+import Mines from "@/pages/Mines";
 import History from "@/pages/History";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
@@ -24,6 +26,8 @@ function Router() {
         <Route path="/blackjack" component={Blackjack} />
         <Route path="/roulette" component={Roulette} />
         <Route path="/dice" component={Dice} />
+        <Route path="/plinko" component={Plinko} />
+        <Route path="/mines" component={Mines} />
         <Route path="/history" component={History} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />

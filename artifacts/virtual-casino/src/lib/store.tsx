@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useRe
 import { toast } from "sonner";
 import { getLevelFor } from "./levels";
 
-export type GameType = "slots" | "blackjack" | "roulette" | "dice";
+export type GameType = "slots" | "blackjack" | "roulette" | "dice" | "plinko" | "mines";
 
 export interface GameHistoryEvent {
   id: string;

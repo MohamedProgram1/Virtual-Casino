@@ -14,6 +14,7 @@ interface VipToggleProps {
 export function VipToggle({ game, isVip, onChange, disabled }: VipToggleProps) {
   const { stats } = useCasinoStore();
   const unlock = VIP_UNLOCKS[game];
+  if (!unlock) return null;
   const unlocked = isVipUnlocked(game, stats.handsPlayed);
   const requiredLevel = LEVELS.find((l) => l.level === unlock.unlockLevel);
 

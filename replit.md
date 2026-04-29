@@ -26,6 +26,6 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Artifacts
 
-- **virtual-casino** (`/`) — Lucky Vault, a frontend-only virtual casino with slots, blackjack, roulette, and over/under dice. Uses no real money. State (balance, history, stats, settings) persists to `localStorage` under `lucky_vault_casino_state` via `src/lib/store.tsx`. Pages live in `src/pages/` and the persistent top bar / page transitions are in `src/components/layout/Layout.tsx`. No backend.
+- **virtual-casino** (`/`) — Lucky Vault, a frontend-only virtual casino with six games: slots, blackjack, roulette, over/under dice, plinko, and mines. Uses no real money. State (balance, history, stats, settings) persists to `localStorage` under `lucky_vault_casino_state` via `src/lib/store.tsx`. Pages live in `src/pages/`, persistent top bar / page transitions are in `src/components/layout/Layout.tsx`. The level system (`src/lib/levels.ts`) ranks players by lifetime `handsPlayed` and gates VIP variants of the four classic games — `VIP_UNLOCKS` is `Partial<Record<GameType, ...>>` so new games (plinko, mines) can opt in later. No backend.
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

@@ -62,46 +62,59 @@ const SUIT_INFO: Record<Suit, { Icon: typeof Spade; color: string }> = {
 function PlayingCard({ card, hidden, index }: { card?: Card; hidden?: boolean; index: number }) {
   return (
     <motion.div
-      initial={{ rotateY: 180, x: -40, opacity: 0 }}
-      animate={{ rotateY: hidden ? 180 : 0, x: 0, opacity: 1 }}
-      transition={{ delay: index * 0.12, type: "spring", stiffness: 120, damping: 14 }}
-      style={{ transformStyle: "preserve-3d" }}
+      initial={{ y: -16, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: index * 0.12, duration: 0.3, ease: "easeOut" }}
       className="relative w-20 h-28 sm:w-24 sm:h-32"
+      style={{ perspective: 800 }}
     >
-      {/* Front */}
-      <div
-        className="absolute inset-0 rounded-lg bg-gradient-to-b from-zinc-50 to-zinc-200 shadow-xl border border-zinc-300 p-2 flex flex-col justify-between"
-        style={{ backfaceVisibility: "hidden" }}
-      >
-        {card && (() => {
-          const { Icon, color } = SUIT_INFO[card.suit];
-          return (
-            <>
-              <div className={cn("text-lg font-bold leading-none", color)}>{card.rank}</div>
-              <div className="self-center">
-                <Icon className={cn("w-8 h-8", color)} fill="currentColor" />
-              </div>
-              <div className={cn("text-lg font-bold leading-none self-end rotate-180", color)}>
-                {card.rank}
-              </div>
-            </>
-          );
-        })()}
-      </div>
-      {/* Back */}
-      <div
-        className="absolute inset-0 rounded-lg border border-primary/30 shadow-xl"
+      <motion.div
+        initial={false}
+        animate={{ rotateY: hidden ? 180 : 0 }}
+        transition={{ duration: 0.45, type: "spring", stiffness: 110, damping: 16 }}
         style={{
-          backfaceVisibility: "hidden",
-          transform: "rotateY(180deg)",
-          background:
-            "repeating-linear-gradient(45deg, hsl(348 68% 18%), hsl(348 68% 18%) 8px, hsl(0 0% 7%) 8px, hsl(0 0% 7%) 16px)",
+          transformStyle: "preserve-3d",
+          width: "100%",
+          height: "100%",
+          position: "relative",
         }}
       >
-        <div className="absolute inset-2 rounded border border-primary/40 flex items-center justify-center">
-          <Spade className="w-8 h-8 text-primary/60" fill="currentColor" />
+        {/* Front */}
+        <div
+          className="absolute inset-0 rounded-lg bg-gradient-to-b from-zinc-50 to-zinc-200 shadow-xl border border-zinc-300 p-2 flex flex-col justify-between"
+          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}
+        >
+          {card && (() => {
+            const { Icon, color } = SUIT_INFO[card.suit];
+            return (
+              <>
+                <div className={cn("text-lg font-bold leading-none", color)}>{card.rank}</div>
+                <div className="self-center">
+                  <Icon className={cn("w-8 h-8", color)} fill="currentColor" />
+                </div>
+                <div className={cn("text-lg font-bold leading-none self-end rotate-180", color)}>
+                  {card.rank}
+                </div>
+              </>
+            );
+          })()}
         </div>
-      </div>
+        {/* Back */}
+        <div
+          className="absolute inset-0 rounded-lg border border-primary/30 shadow-xl"
+          style={{
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            transform: "rotateY(180deg)",
+            background:
+              "repeating-linear-gradient(45deg, hsl(348 68% 18%), hsl(348 68% 18%) 8px, hsl(0 0% 7%) 8px, hsl(0 0% 7%) 16px)",
+          }}
+        >
+          <div className="absolute inset-2 rounded border border-primary/40 flex items-center justify-center">
+            <Spade className="w-8 h-8 text-primary/60" fill="currentColor" />
+          </div>
+        </div>
+      </motion.div>
     </motion.div>
   );
 }

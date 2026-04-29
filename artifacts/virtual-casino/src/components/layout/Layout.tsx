@@ -14,6 +14,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/blackjack": "Blackjack",
   "/roulette": "Roulette",
   "/dice": "Dice",
+  "/plinko": "Plinko",
+  "/mines": "Mines",
   "/history": "History",
   "/settings": "Settings",
 };

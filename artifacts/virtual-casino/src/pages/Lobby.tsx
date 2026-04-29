@@ -12,9 +12,11 @@ import {
   Award,
   Lock,
   Sparkles,
+  Circle,
+  Bomb,
 } from "lucide-react";
 import { useCasinoStore, GameType } from "@/lib/store";
-import { getLevelFor, getNextLevel, isVipUnlocked, VIP_UNLOCKS, LEVELS } from "@/lib/levels";
+import { getLevelFor, getNextLevel, isVipUnlocked, hasVipVariant, VIP_UNLOCKS, LEVELS } from "@/lib/levels";
 import { cn } from "@/lib/utils";
 
 const GAMES: Array<{
@@ -62,6 +64,24 @@ const GAMES: Array<{
     icon: Dices,
     accent: "from-violet-500/20 to-indigo-900/10",
   },
+  {
+    id: "plinko",
+    href: "/plinko",
+    title: "Plinko",
+    tagline: "Drop the ball. Let physics decide.",
+    blurb: "Twelve rows of pegs. Three risk modes. Edges pay big.",
+    icon: Circle,
+    accent: "from-amber-500/20 to-yellow-900/10",
+  },
+  {
+    id: "mines",
+    href: "/mines",
+    title: "Mines",
+    tagline: "Find the gems. Avoid the bombs.",
+    blurb: "Five-by-five grid. The longer you press your luck, the bigger the prize.",
+    icon: Bomb,
+    accent: "from-zinc-500/20 to-rose-900/10",
+  },
 ];
 
 function formatRelative(ts: number): string {
@@ -79,6 +99,8 @@ const GAME_LABELS: Record<GameType, string> = {
   blackjack: "Blackjack",
   roulette: "Roulette",
   dice: "Dice",
+  plinko: "Plinko",
+  mines: "Mines",
 };
 
 function ActivityTicker() {
@@ -269,8 +291,11 @@ export default function Lobby() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {GAMES.map((game, i) => {
             const unlock = VIP_UNLOCKS[game.id];
+            const hasVip = hasVipVariant(game.id);
             const vipUnlocked = isVipUnlocked(game.id, stats.handsPlayed);
-            const requiredLevel = LEVELS.find((l) => l.level === unlock.unlockLevel);
+            const requiredLevel = unlock
+              ? LEVELS.find((l) => l.level === unlock.unlockLevel)
+              : null;
             return (
               <motion.div
                 key={game.id}
@@ -290,12 +315,13 @@ export default function Lobby() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                           <span className="font-serif text-xl">{game.title}</span>
-                          {vipUnlocked ? (
+                          {hasVip && vipUnlocked && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-b from-amber-300/30 to-primary/20 border border-primary/40 text-[10px] font-bold uppercase tracking-wider text-primary">
                               <Sparkles className="w-2.5 h-2.5" />
                               VIP
                             </span>
-                          ) : (
+                          )}
+                          {hasVip && !vipUnlocked && (
                             <span
                               className={cn(
                                 "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-card/60 border border-muted-foreground/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground",
@@ -310,7 +336,7 @@ export default function Lobby() {
                           {game.tagline}
                         </div>
                         <div className="text-sm text-muted-foreground">{game.blurb}</div>
-                        {vipUnlocked && (
+                        {hasVip && vipUnlocked && unlock && (
                           <div className="text-xs text-primary/70 mt-2 italic">
                             VIP perk: {unlock.perk}
                           </div>
