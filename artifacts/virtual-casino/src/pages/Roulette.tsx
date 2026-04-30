@@ -6,6 +6,7 @@ import { useCasinoStore } from "@/lib/store";
 import { isVipUnlocked } from "@/lib/levels";
 import { VipToggle } from "@/components/VipToggle";
 import { useRegisterPlayAgain } from "@/lib/playAgain";
+import { playSound } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 
 const RED_NUMBERS = new Set([
@@ -211,6 +212,7 @@ export default function Roulette() {
 
     setSpinning(true);
     setResultNumber(null);
+    playSound("spin");
 
     const winning = Math.floor(Math.random() * 37);
     const wheelIndex = WHEEL_ORDER.indexOf(winning);
@@ -311,11 +313,30 @@ export default function Roulette() {
         </div>
       </div>
 
-      {/* Wheel + ball */}
-      <div className="flex flex-col items-center">
-        <div className="relative w-64 h-64 sm:w-72 sm:h-72">
-          {/* Outer rim */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-b from-amber-700 to-amber-950 shadow-2xl" />
+      {/* Wheel + ball — tilted forward for a 3D feel */}
+      <div className="flex flex-col items-center" style={{ perspective: "1100px" }}>
+        <div
+          className="relative w-64 h-64 sm:w-72 sm:h-72"
+          style={{
+            transform: "rotateX(28deg)",
+            transformStyle: "preserve-3d",
+            filter:
+              "drop-shadow(0 30px 30px rgba(0,0,0,0.55)) drop-shadow(0 8px 12px rgba(0,0,0,0.4))",
+          }}
+        >
+          {/* Outer rim — extruded ring */}
+          <div className="absolute inset-0 rounded-full bg-gradient-to-b from-amber-500 via-amber-700 to-amber-950 shadow-2xl" />
+          <div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{
+              background:
+                "radial-gradient(ellipse at 30% 20%, rgba(255,235,180,0.55) 0%, rgba(255,235,180,0) 35%)",
+            }}
+          />
+          {/* Faux side wall to read as a depth ring */}
+          <div
+            className="absolute -bottom-1 left-2 right-2 h-3 rounded-full bg-amber-950/80 blur-[1px]"
+          />
           {/* Wheel */}
           <motion.div
             animate={{ rotate: wheelRotation }}

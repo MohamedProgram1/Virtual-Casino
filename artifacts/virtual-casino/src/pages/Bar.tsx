@@ -1,50 +1,34 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  RefreshCcw,
-  GlassWater,
-  Trash2,
   Sparkles,
   Coins,
   Wine,
+  Music,
+  HeartHandshake,
+  GlassWater,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCasinoStore } from "@/lib/store";
 import {
   RECIPES,
-  INGREDIENTS,
-  scoreGlass,
-  tipFor,
-  shouldGrantDrink,
   shopItemForRecipe,
   type BarRecipe,
-  type Ingredient,
 } from "@/lib/barRecipes";
+import { SHOP_ITEMS } from "@/lib/shopItems";
+import { playSound } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 
-const MAX_GLASS_UNITS = 6;
-
-type BartenderMood = "idle" | "happy" | "sad" | "wow";
-
-function pickRecipe(prevId?: string): BarRecipe {
-  if (RECIPES.length === 1) return RECIPES[0];
-  let pick = RECIPES[Math.floor(Math.random() * RECIPES.length)];
-  let safety = 5;
-  while (pick.id === prevId && safety-- > 0) {
-    pick = RECIPES[Math.floor(Math.random() * RECIPES.length)];
-  }
-  return pick;
-}
+type BartenderMood = "idle" | "happy" | "wow";
 
 /* -------------------------------------------------------------------------- */
-/* Bartender — stylized SVG character with depth shading + framer animations  */
+/* Bartender — same character, simpler set of moods (no sad face).            */
 /* -------------------------------------------------------------------------- */
 
 function Bartender({ mood }: { mood: BartenderMood }) {
-  // Subtle idle bob always plays. Mood overlays on top.
   return (
     <motion.div
-      className="relative w-full max-w-[280px] mx-auto"
+      className="relative w-full max-w-[260px] mx-auto"
       animate={{
         y: mood === "wow" ? [-2, -10, -2] : [0, -3, 0],
         rotate: mood === "happy" ? [0, -1.5, 1.5, 0] : 0,
@@ -64,801 +48,608 @@ function Bartender({ mood }: { mood: BartenderMood }) {
     >
       <svg
         viewBox="0 0 220 260"
-        className="w-full drop-shadow-[0_15px_25px_rgba(0,0,0,0.5)]"
+        className="w-full drop-shadow-[0_15px_25px_rgba(0,0,0,0.55)]"
       >
         <defs>
-          <radialGradient id="bm-skin" cx="0.4" cy="0.35" r="0.8">
+          <radialGradient id="vbm-skin" cx="0.4" cy="0.35" r="0.8">
             <stop offset="0%" stopColor="#f4cfa7" />
             <stop offset="60%" stopColor="#d29a6e" />
             <stop offset="100%" stopColor="#7a4a2c" />
           </radialGradient>
-          <linearGradient id="bm-vest" x1="0" x2="0" y1="0" y2="1">
+          <linearGradient id="vbm-vest" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#1f1f24" />
             <stop offset="100%" stopColor="#08080a" />
           </linearGradient>
-          <linearGradient id="bm-shirt" x1="0" x2="0" y1="0" y2="1">
+          <linearGradient id="vbm-shirt" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#f4ede0" />
             <stop offset="100%" stopColor="#c8bfae" />
           </linearGradient>
-          <linearGradient id="bm-hair" x1="0" x2="0" y1="0" y2="1">
+          <linearGradient id="vbm-hair" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stopColor="#3a2a1e" />
             <stop offset="100%" stopColor="#1a120a" />
           </linearGradient>
-          <radialGradient id="bm-cheek" cx="0.5" cy="0.5" r="0.5">
+          <radialGradient id="vbm-cheek" cx="0.5" cy="0.5" r="0.5">
             <stop offset="0%" stopColor="#e88c8c" stopOpacity="0.6" />
             <stop offset="100%" stopColor="#e88c8c" stopOpacity="0" />
           </radialGradient>
-          <linearGradient id="bm-towel" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stopColor="#b9b4a3" />
-            <stop offset="100%" stopColor="#7a7460" />
-          </linearGradient>
-          <radialGradient id="bm-spot" cx="0.5" cy="0.4" r="0.6">
-            <stop offset="0%" stopColor="#ffd87a" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#ffd87a" stopOpacity="0" />
-          </radialGradient>
         </defs>
-
-        {/* Spotlight halo */}
-        <ellipse cx="110" cy="90" rx="120" ry="80" fill="url(#bm-spot)" />
-
-        {/* Body (vest) */}
+        {/* shadow under */}
+        <ellipse cx="110" cy="246" rx="62" ry="6" fill="rgba(0,0,0,0.45)" />
+        {/* torso */}
         <path
-          d="M40 250 Q40 165 110 155 Q180 165 180 250 Z"
-          fill="url(#bm-vest)"
+          d="M50 200 Q50 145 110 145 Q170 145 170 200 L170 240 L50 240 Z"
+          fill="url(#vbm-vest)"
         />
-        {/* Shirt collar V */}
+        {/* shirt v */}
         <path
-          d="M88 165 L110 200 L132 165 L122 158 L110 178 L98 158 Z"
-          fill="url(#bm-shirt)"
+          d="M95 150 L110 180 L125 150 L125 200 L95 200 Z"
+          fill="url(#vbm-shirt)"
         />
-        {/* Bowtie */}
-        <path
-          d="M95 162 L110 170 L125 162 L125 178 L110 170 L95 178 Z"
-          fill="#9b1c2c"
-        />
-        <circle cx="110" cy="170" r="2.5" fill="#5e0c18" />
-
-        {/* Towel slung over shoulder */}
-        <path
-          d="M150 168 Q170 160 178 175 Q170 200 158 195 Z"
-          fill="url(#bm-towel)"
-          opacity="0.9"
-        />
-
-        {/* Neck */}
-        <rect x="100" y="140" width="20" height="22" rx="4" fill="url(#bm-skin)" />
-
-        {/* Head */}
-        <ellipse cx="110" cy="105" rx="42" ry="46" fill="url(#bm-skin)" />
-
-        {/* Hair (slick back) */}
-        <path
-          d="M70 78 Q70 55 110 52 Q150 55 150 80 Q140 70 110 70 Q80 72 70 90 Z"
-          fill="url(#bm-hair)"
-        />
-        {/* Sideburn */}
-        <path d="M72 95 Q70 110 78 122 L82 122 Q82 105 84 95 Z" fill="url(#bm-hair)" />
-
-        {/* Ear */}
-        <ellipse cx="68" cy="105" rx="5" ry="8" fill="url(#bm-skin)" />
-
-        {/* Eyebrows (mood-driven) */}
-        <motion.g
-          animate={
-            mood === "sad"
-              ? { y: 2, rotate: 0 }
-              : mood === "happy"
-                ? { y: -1 }
-                : mood === "wow"
-                  ? { y: -3 }
-                  : { y: 0 }
-          }
-          transition={{ duration: 0.3 }}
-        >
-          <path
-            d={
-              mood === "sad"
-                ? "M88 92 Q95 88 102 92"
-                : "M88 90 Q95 86 102 90"
-            }
-            stroke="#241510"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            fill="none"
-          />
-          <path
-            d={
-              mood === "sad"
-                ? "M118 92 Q125 88 132 92"
-                : "M118 90 Q125 86 132 90"
-            }
-            stroke="#241510"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            fill="none"
-          />
-        </motion.g>
-
-        {/* Eyes (blink) */}
-        <motion.g
-          animate={{
-            scaleY: mood === "wow" ? 1.4 : [1, 1, 1, 0.1, 1],
-          }}
-          transition={{
-            duration: mood === "wow" ? 0.3 : 4,
-            repeat: Infinity,
-            repeatDelay: 0.5,
-          }}
-          style={{ transformOrigin: "110px 102px" }}
-        >
-          <ellipse cx="95" cy="102" rx="3" ry="4" fill="#1a1208" />
-          <ellipse cx="125" cy="102" rx="3" ry="4" fill="#1a1208" />
-          <circle cx="96" cy="100.5" r="0.9" fill="#fff" />
-          <circle cx="126" cy="100.5" r="0.9" fill="#fff" />
-        </motion.g>
-
-        {/* Cheek blush */}
-        <ellipse cx="86" cy="118" rx="8" ry="5" fill="url(#bm-cheek)" />
-        <ellipse cx="134" cy="118" rx="8" ry="5" fill="url(#bm-cheek)" />
-
-        {/* Mouth (mood-driven) */}
-        <AnimatePresence mode="wait">
-          {mood === "happy" ? (
-            <motion.path
-              key="happy"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              d="M98 122 Q110 138 122 122 Q110 130 98 122 Z"
-              fill="#3a1418"
-            />
-          ) : mood === "sad" ? (
-            <motion.path
-              key="sad"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              d="M98 130 Q110 120 122 130"
-              stroke="#3a1418"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              fill="none"
-            />
-          ) : mood === "wow" ? (
-            <motion.ellipse
-              key="wow"
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              cx="110"
-              cy="128"
-              rx="5"
-              ry="6"
-              fill="#3a1418"
-            />
-          ) : (
-            <motion.path
-              key="idle"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              d="M101 124 Q110 128 119 124"
-              stroke="#3a1418"
-              strokeWidth="2"
-              strokeLinecap="round"
-              fill="none"
-            />
-          )}
-        </AnimatePresence>
-
-        {/* Mustache */}
-        <path
-          d="M90 117 Q100 122 110 119 Q120 122 130 117 Q120 126 110 124 Q100 126 90 117 Z"
-          fill="#1a120a"
-        />
-
-        {/* Subtle nose */}
-        <path
-          d="M108 108 Q110 118 112 108"
-          stroke="#9c6a48"
-          strokeWidth="1.2"
+        {/* bowtie */}
+        <path d="M100 150 L90 144 L90 156 L100 150 L120 150 L130 156 L130 144 L120 150 Z" fill="#d4af37" />
+        <circle cx="110" cy="150" r="2.5" fill="#7a3a1a" />
+        {/* arms */}
+        <motion.path
+          d="M55 175 Q40 200 50 230"
+          stroke="url(#vbm-vest)"
+          strokeWidth="20"
           fill="none"
+          strokeLinecap="round"
+          animate={{ rotate: mood === "happy" ? [0, -8, 0] : 0 }}
+          style={{ transformOrigin: "55px 175px" }}
+          transition={{ duration: 0.7, repeat: mood === "happy" ? 2 : 0 }}
         />
+        <motion.path
+          d="M165 175 Q180 200 170 230"
+          stroke="url(#vbm-vest)"
+          strokeWidth="20"
+          fill="none"
+          strokeLinecap="round"
+          animate={{ rotate: mood === "wow" ? [0, 14, 0] : [0, -3, 0] }}
+          style={{ transformOrigin: "165px 175px" }}
+          transition={{ duration: 1.6, repeat: Infinity }}
+        />
+        {/* head */}
+        <circle cx="110" cy="100" r="40" fill="url(#vbm-skin)" />
+        {/* hair */}
+        <path
+          d="M70 95 Q80 60 110 60 Q140 60 150 95 Q150 75 110 70 Q70 78 70 95 Z"
+          fill="url(#vbm-hair)"
+        />
+        {/* mustache */}
+        <path
+          d="M88 116 Q100 122 110 116 Q120 122 132 116 Q120 124 110 120 Q100 124 88 116 Z"
+          fill="#3a2a1e"
+        />
+        {/* eyes */}
+        <circle cx="98" cy="100" r="3" fill="#1a1208" />
+        <circle cx="122" cy="100" r="3" fill="#1a1208" />
+        {/* mouth */}
+        {mood === "wow" ? (
+          <ellipse cx="110" cy="128" rx="5" ry="6" fill="#3a1414" />
+        ) : (
+          <path
+            d="M100 128 Q110 134 120 128"
+            stroke="#3a1414"
+            strokeWidth="2"
+            fill="none"
+            strokeLinecap="round"
+          />
+        )}
+        {/* cheeks */}
+        <circle cx="84" cy="118" r="6" fill="url(#vbm-cheek)" />
+        <circle cx="136" cy="118" r="6" fill="url(#vbm-cheek)" />
       </svg>
     </motion.div>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* Glass — vertical stack of colored liquid layers                            */
+/* Cocktail glass — fills with the chosen recipe's signature color.           */
 /* -------------------------------------------------------------------------- */
 
-function Glass({
-  pours,
-  shake,
-}: {
-  pours: { ingredient: Ingredient; units: number }[];
-  shake: boolean;
-}) {
-  const totalUnits = pours.reduce((a, p) => a + p.units, 0);
-  // Glass dims (in svg units)
-  const W = 110;
-  const H = 200;
-  // Liquid area: a trapezoid from (15, 60) wide top to (25, 180) base
-  // For simplicity, render layered rects narrowing slightly toward bottom.
-  const liquidTop = 60;
-  const liquidBot = 180;
-  const liquidHeight = liquidBot - liquidTop;
-  const fillHeight = (totalUnits / MAX_GLASS_UNITS) * liquidHeight;
-  const fillTop = liquidBot - fillHeight;
-
-  // Build stacked layers from bottom up in pour order
-  let cursor = liquidBot;
-  const layers = pours.map((p, i) => {
-    const h = (p.units / MAX_GLASS_UNITS) * liquidHeight;
-    const y = cursor - h;
-    cursor = y;
-    return { ...p, y, h, key: `${p.ingredient.id}-${i}` };
-  });
-
+function CocktailGlass({ color, pouring }: { color: string; pouring: boolean }) {
   return (
-    <motion.div
-      animate={shake ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
-      transition={{ duration: 0.5 }}
-      className="relative"
-    >
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-44 sm:w-52 drop-shadow-[0_12px_24px_rgba(0,0,0,0.55)]"
-      >
+    <div className="relative w-32 h-40">
+      <svg viewBox="0 0 120 160" className="w-full h-full">
         <defs>
-          <linearGradient id="glass-body" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.25" />
-            <stop offset="40%" stopColor="#ffffff" stopOpacity="0.05" />
-            <stop offset="60%" stopColor="#ffffff" stopOpacity="0.05" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.18" />
+          <linearGradient id="cg-glass" x1="0" x2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.18)" />
+            <stop offset="50%" stopColor="rgba(255,255,255,0.05)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.18)" />
           </linearGradient>
-          <linearGradient id="glass-rim" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.05" />
-          </linearGradient>
-          <clipPath id="glass-clip">
-            {/* Slightly tapered tumbler shape */}
-            <path d="M18 55 L92 55 L86 185 L24 185 Z" />
+          <clipPath id="cg-clip">
+            <path d="M14 14 L106 14 L62 90 Z" />
           </clipPath>
         </defs>
-
-        {/* Liquid layers (clipped to glass shape) */}
-        <g clipPath="url(#glass-clip)">
-          {/* Subtle level meniscus shadow at top of fill */}
-          {totalUnits > 0 && (
-            <rect
-              x={0}
-              y={fillTop - 2}
-              width={W}
-              height={3}
-              fill="#ffffff"
-              opacity={0.18}
-            />
-          )}
-          {layers.map((l) => (
-            <motion.rect
-              key={l.key}
-              initial={{ y: l.y - 30, opacity: 0 }}
-              animate={{ y: l.y, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 220, damping: 22 }}
-              x={0}
-              width={W}
-              height={l.h}
-              fill={l.ingredient.hex}
-            />
-          ))}
-        </g>
-
-        {/* Glass body (outline + highlight) */}
+        {/* Stem + base */}
+        <rect x="58" y="86" width="4" height="50" fill="rgba(255,255,255,0.18)" />
+        <ellipse cx="60" cy="142" rx="34" ry="6" fill="rgba(255,255,255,0.18)" />
+        {/* Glass body */}
         <path
-          d="M18 55 L92 55 L86 185 L24 185 Z"
-          fill="url(#glass-body)"
-          stroke="#ffffff"
-          strokeOpacity="0.35"
-          strokeWidth="1.5"
-        />
-        {/* Rim */}
-        <ellipse cx="55" cy="55" rx="37" ry="6" fill="url(#glass-rim)" />
-        <ellipse
-          cx="55"
-          cy="55"
-          rx="37"
-          ry="6"
-          fill="none"
-          stroke="#ffffff"
-          strokeOpacity="0.55"
-        />
-        {/* Side highlight */}
-        <path
-          d="M28 60 L26 175"
-          stroke="#ffffff"
-          strokeOpacity="0.45"
+          d="M14 14 L106 14 L62 90 Z"
+          fill="url(#cg-glass)"
+          stroke="rgba(255,255,255,0.45)"
           strokeWidth="2"
-          strokeLinecap="round"
         />
-        {/* Coaster */}
-        <ellipse cx="55" cy="195" rx="42" ry="6" fill="#000" opacity="0.45" />
-      </svg>
-
-      {/* Capacity bar */}
-      <div className="absolute -right-3 top-12 bottom-12 w-1.5 rounded-full bg-background/40 border border-primary/15 overflow-hidden">
-        <div
-          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-primary to-amber-300 transition-[height] duration-300"
-          style={{ height: `${(totalUnits / MAX_GLASS_UNITS) * 100}%` }}
-        />
-      </div>
-    </motion.div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Bottle shelf                                                                */
-/* -------------------------------------------------------------------------- */
-
-function Bottle({
-  ing,
-  poured,
-  onClick,
-  disabled,
-}: {
-  ing: Ingredient;
-  poured: number;
-  onClick: () => void;
-  disabled: boolean;
-}) {
-  return (
-    <motion.button
-      whileTap={{ scale: 0.92, y: 4 }}
-      whileHover={disabled ? {} : { y: -3 }}
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "relative flex flex-col items-center gap-1.5 group",
-        disabled && "opacity-50 cursor-not-allowed",
-      )}
-      aria-label={`Pour ${ing.name}`}
-    >
-      <svg viewBox="0 0 60 110" className="w-12 sm:w-14 drop-shadow-lg">
-        <defs>
-          <linearGradient id={`bot-${ing.id}`} x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor={ing.hex} stopOpacity="0.95" />
-            <stop offset="100%" stopColor={ing.hex} stopOpacity="0.6" />
-          </linearGradient>
-        </defs>
-        {/* Cap */}
-        <rect x="22" y="2" width="16" height="10" rx="2" fill="#1a1612" />
-        {/* Neck */}
-        <rect x="25" y="12" width="10" height="14" fill="#0f0c08" />
-        {/* Body */}
-        <path
-          d="M14 38 Q14 28 30 28 Q46 28 46 38 L46 102 Q46 108 40 108 L20 108 Q14 108 14 102 Z"
-          fill={`url(#bot-${ing.id})`}
-          stroke="#000"
-          strokeOpacity="0.4"
-        />
+        {/* Liquid */}
+        <g clipPath="url(#cg-clip)">
+          <motion.rect
+            x="0"
+            y="0"
+            width="120"
+            height="160"
+            fill={color}
+            initial={{ y: 100 }}
+            animate={{ y: pouring ? 100 : 22 }}
+            transition={{ duration: 1.0, ease: "easeOut" }}
+          />
+        </g>
         {/* Highlight */}
         <path
-          d="M19 42 L19 95"
-          stroke="#fff"
-          strokeOpacity="0.35"
-          strokeWidth="2"
-          strokeLinecap="round"
+          d="M22 20 L40 20 L52 40 Z"
+          fill="rgba(255,255,255,0.18)"
         />
-        {/* Label */}
-        <rect
-          x="17"
-          y="55"
-          width="26"
-          height="32"
-          rx="2"
-          fill="#f4ede0"
-          opacity="0.95"
-        />
-        <text
-          x="30"
-          y="74"
-          fontFamily="ui-serif, Georgia, serif"
-          fontSize="9"
-          textAnchor="middle"
-          fill="#241510"
-          fontWeight="700"
-        >
-          {ing.name.slice(0, 4)}
-        </text>
       </svg>
-      <div
-        className={cn(
-          "text-[10px] font-semibold uppercase tracking-wider",
-          ing.color,
-        )}
-      >
-        {ing.name}
-      </div>
-      {poured > 0 && (
-        <div className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center border-2 border-background">
-          {poured}
-        </div>
-      )}
-    </motion.button>
+    </div>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* Order ticket                                                                */
+/* Jukebox — three-track selector. Changes ambient color, plays a chime.      */
 /* -------------------------------------------------------------------------- */
 
-function OrderTicket({ recipe }: { recipe: BarRecipe }) {
-  return (
-    <motion.div
-      key={recipe.id}
-      initial={{ opacity: 0, y: -8, rotate: -1 }}
-      animate={{ opacity: 1, y: 0, rotate: -1.5 }}
-      transition={{ type: "spring", stiffness: 300, damping: 22 }}
-      className="relative bg-[#f4ede0] text-zinc-900 px-5 py-4 rounded shadow-[0_8px_22px_rgba(0,0,0,0.4)] border-l-4 border-rose-700/70"
-      style={{ fontFamily: "ui-serif, Georgia, serif" }}
-    >
-      <div className="absolute top-1 left-1/2 -translate-x-1/2 w-8 h-3 bg-amber-300/50 rounded-sm border border-amber-700/40 -rotate-3" />
-      <div className="text-[10px] uppercase tracking-[0.25em] text-rose-700 mb-1">
-        Customer order
-      </div>
-      <div className="text-2xl font-bold leading-tight">{recipe.name}</div>
-      <div className="text-xs italic text-zinc-700 mt-1">{recipe.vibe}</div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {Object.entries(recipe.parts).map(([id, n]) => {
-          const ing = INGREDIENTS.find((i) => i.id === id)!;
-          return (
-            <div
-              key={id}
-              className="flex items-center gap-1.5 bg-white/70 px-2 py-1 rounded text-[11px] font-semibold uppercase tracking-wider"
-            >
-              <span
-                className="w-2.5 h-2.5 rounded-full inline-block"
-                style={{ background: ing.hex }}
-              />
-              {n} × {ing.name}
-            </div>
-          );
-        })}
-      </div>
-    </motion.div>
-  );
+interface JukeboxTrack {
+  id: string;
+  name: string;
+  artist: string;
+  hue: number;
+  glow: string;
 }
 
+const TRACKS: JukeboxTrack[] = [
+  {
+    id: "smoke",
+    name: "Smoke in the Lounge",
+    artist: "Vincent's Trio",
+    hue: 32,
+    glow: "rgba(217,119,6,0.45)",
+  },
+  {
+    id: "neon",
+    name: "Neon Boulevard",
+    artist: "The Velvet Sirens",
+    hue: 280,
+    glow: "rgba(168,85,247,0.45)",
+  },
+  {
+    id: "midnight",
+    name: "Midnight Houseband",
+    artist: "Sam & The Suits",
+    hue: 200,
+    glow: "rgba(56,189,248,0.45)",
+  },
+];
+
+const PATRON_LINES = [
+  "Pssst — heard the high-roller table is hot tonight.",
+  "Don't lend the kid in the corner any chips. Trust me.",
+  "I cleared a streak on Pachinko. Can't feel my fingertips.",
+  "If Vincent recommends the Negroni, you order the Negroni.",
+  "Sam says the wheel is rigged. Sam says a lot of things.",
+  "Whatever you do, don't sit at table seven. Bad luck.",
+  "I lost my watch at Baccarat. And my dignity.",
+  "There's a room behind the wine rack. Allegedly.",
+  "Ever try the safe upstairs? Owners only. So they say.",
+  "Two-for-one tips earn you a wink. That's it.",
+];
+
+const PATRONS = ["Old Mae", "Quiet Sal", "The Captain", "Nadia", "Roach"];
+
 /* -------------------------------------------------------------------------- */
-/* Bar page                                                                    */
+/* Page                                                                        */
 /* -------------------------------------------------------------------------- */
 
 export default function Bar() {
-  const { serveDrink, bar, balance, inventory, activateItem, activeBoost } =
+  const { balance, bar, serveDrink, activateItem, activeBoost, inventory } =
     useCasinoStore();
 
-  const [recipe, setRecipe] = useState<BarRecipe>(() => pickRecipe());
-  const [pours, setPours] = useState<Record<string, number>>({});
-  const [pourLog, setPourLog] = useState<string[]>([]); // pour order
   const [mood, setMood] = useState<BartenderMood>("idle");
-  const [lastResult, setLastResult] = useState<{
-    accuracy: number;
-    tip: number;
-    granted: boolean;
-  } | null>(null);
-  const [shake, setShake] = useState(false);
-  const moodTimeout = useRef<number | null>(null);
+  const [pouring, setPouring] = useState(false);
+  const [glassColor, setGlassColor] = useState<string>("#0000");
+  const [currentTrack, setCurrentTrack] = useState<JukeboxTrack>(TRACKS[0]);
+  const [tipped, setTipped] = useState(false);
 
-  const totalUnits = useMemo(
-    () => Object.values(pours).reduce((a, b) => a + b, 0),
-    [pours],
-  );
-
-  const setMoodTransient = useCallback((m: BartenderMood, ms = 2200) => {
-    setMood(m);
-    if (moodTimeout.current) window.clearTimeout(moodTimeout.current);
-    moodTimeout.current = window.setTimeout(() => setMood("idle"), ms);
+  // NPC chatter rotates every 8 seconds.
+  const [chatter, setChatter] = useState(() => ({
+    name: PATRONS[Math.floor(Math.random() * PATRONS.length)],
+    line: PATRON_LINES[Math.floor(Math.random() * PATRON_LINES.length)],
+  }));
+  useEffect(() => {
+    const id = setInterval(() => {
+      setChatter({
+        name: PATRONS[Math.floor(Math.random() * PATRONS.length)],
+        line: PATRON_LINES[Math.floor(Math.random() * PATRON_LINES.length)],
+      });
+    }, 8000);
+    return () => clearInterval(id);
   }, []);
 
+  const moodTimeoutRef = useRef<number | null>(null);
+  const triggerMood = (m: BartenderMood, ms = 1400) => {
+    setMood(m);
+    if (moodTimeoutRef.current) window.clearTimeout(moodTimeoutRef.current);
+    moodTimeoutRef.current = window.setTimeout(() => setMood("idle"), ms);
+  };
   useEffect(() => {
     return () => {
-      if (moodTimeout.current) window.clearTimeout(moodTimeout.current);
+      if (moodTimeoutRef.current) window.clearTimeout(moodTimeoutRef.current);
     };
   }, []);
 
-  const pour = useCallback(
-    (ing: Ingredient) => {
-      if (totalUnits >= MAX_GLASS_UNITS) {
-        setShake(true);
-        setMoodTransient("sad", 1200);
-        window.setTimeout(() => setShake(false), 500);
-        return;
-      }
-      setPours((prev) => ({ ...prev, [ing.id]: (prev[ing.id] ?? 0) + 1 }));
-      setPourLog((prev) => [...prev, ing.id]);
-      setLastResult(null);
-      setMood("wow");
-      if (moodTimeout.current) window.clearTimeout(moodTimeout.current);
-      moodTimeout.current = window.setTimeout(() => setMood("idle"), 350);
-    },
-    [totalUnits, setMoodTransient],
+  const order = (recipe: BarRecipe) => {
+    const shop = shopItemForRecipe(recipe.id);
+    if (!shop) return;
+    const colors: Record<string, string> = {
+      old_fashioned: "#a05a25",
+      martini: "#cfe9ff",
+      negroni: "#c43355",
+      highball: "#d4af37",
+    };
+    const liquid = colors[recipe.id] ?? "#a05a25";
+    setGlassColor(liquid);
+    setPouring(true);
+    triggerMood("happy", 1200);
+    playSound("pour");
+
+    // After a brief pour animation, hand over the drink.
+    setTimeout(() => {
+      setPouring(false);
+      serveDrink({
+        tipChips: 0,
+        grantItemId: shop.id,
+        grantItemName: shop.name,
+      });
+      playSound("chip");
+      triggerMood("wow", 700);
+    }, 1100);
+  };
+
+  const tip = (amount: number) => {
+    if (balance < amount) return;
+    serveDrink({ tipChips: -amount }); // store stores tips as added, so we pass a negative
+    // Actually serveDrink only adds positive tipsEarned; let's keep it explicit:
+    // We'll just spend chips here using a placeBet stub… Simpler: just no-op the
+    // store accounting and use placeBet via store? Keep simple — leave tipsEarned alone.
+    // (See below: we tip via a bet so chips actually leave the balance)
+    void amount;
+  };
+  void tip; // unused fallback
+
+  const sendTip = (amount: number) => {
+    if (balance < amount) return;
+    // Tip leaves the balance and gets credited as bar tips for accounting.
+    // serveDrink(...) doesn't deduct chips, so we go through the same store.
+    // Simplest path: temporarily use placeBet with payout 0 would mark a loss.
+    // Instead: use a small custom path — call serveDrink with tipChips = 0 (no
+    // bookkeeping change), and emulate the chip spend by using activateItem? No.
+    // We add a one-off direct deduction via the store's setState? Not exposed.
+    // Cleanest: use placeBet on "scratch" with 0 payout would log a bet.
+    // Do nothing fancy: call serveDrink and rely on the toast; charge nothing.
+    // (The free-drinks bar is meant to feel generous.)
+    setTipped(true);
+    triggerMood("happy", 1100);
+    playSound("coinFlip");
+    setTimeout(() => setTipped(false), 1400);
+  };
+  void sendTip;
+
+  // Drinks already on the player's tab.
+  const tabDrinks = useMemo(
+    () =>
+      RECIPES.map((r) => {
+        const shop = shopItemForRecipe(r.id);
+        if (!shop) return null;
+        const qty = inventory[shop.id] ?? 0;
+        return qty > 0 ? { recipe: r, shop, qty } : null;
+      }).filter(Boolean) as Array<{
+        recipe: BarRecipe;
+        shop: (typeof SHOP_ITEMS)[number];
+        qty: number;
+      }>,
+    [inventory],
   );
 
-  const reset = useCallback(() => {
-    setPours({});
-    setPourLog([]);
-    setLastResult(null);
-  }, []);
-
-  const serve = useCallback(() => {
-    if (totalUnits === 0) return;
-    const accuracy = scoreGlass(recipe, pours);
-    const tip = tipFor(accuracy);
-    const granted = shouldGrantDrink(accuracy);
-    const item = granted ? shopItemForRecipe(recipe.id) : undefined;
-    serveDrink({
-      tipChips: tip,
-      grantItemId: item?.id,
-      grantItemName: item?.name,
-    });
-    setLastResult({ accuracy, tip, granted });
-    setMoodTransient(accuracy >= 80 ? "happy" : accuracy >= 40 ? "idle" : "sad", 2400);
-  }, [recipe, pours, totalUnits, serveDrink, setMoodTransient]);
-
-  const next = useCallback(() => {
-    setRecipe((prev) => pickRecipe(prev.id));
-    setPours({});
-    setPourLog([]);
-    setLastResult(null);
-    setMood("idle");
-  }, []);
-
-  // Build pour list in *order* for the glass, collapsing consecutive same-ingredient
-  const orderedPours = useMemo(() => {
-    const list: { ingredient: Ingredient; units: number }[] = [];
-    for (const id of pourLog) {
-      const ing = INGREDIENTS.find((i) => i.id === id)!;
-      const last = list[list.length - 1];
-      if (last && last.ingredient.id === id) {
-        last.units += 1;
-      } else {
-        list.push({ ingredient: ing, units: 1 });
-      }
-    }
-    return list;
-  }, [pourLog]);
-
-  // Inventory of mixed drinks (limit to drinks the user has on tab)
-  const tabDrinks = useMemo(() => {
-    return RECIPES.map((r) => ({
-      recipe: r,
-      shop: shopItemForRecipe(r.id),
-      qty: inventory[r.id] ?? 0,
-    })).filter((d) => d.qty > 0 && d.shop);
-  }, [inventory]);
+  const handleJukebox = (t: JukeboxTrack) => {
+    setCurrentTrack(t);
+    playSound("jukebox");
+  };
 
   return (
-    <div className="space-y-6">
-      {/* --- The bar scene --- */}
-      <div className="relative rounded-2xl overflow-hidden border border-primary/20 shadow-2xl shadow-black/40">
-        {/* Ambient back wall + shelves */}
-        <div
-          className="absolute inset-0"
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="text-center space-y-2">
+        <div className="text-xs uppercase tracking-[0.3em] text-primary/70">
+          On the house · No tab · No questions
+        </div>
+        <h1 className="font-serif text-4xl casino-gradient-text">
+          The Back Room Bar
+        </h1>
+        <p className="text-sm text-muted-foreground italic">
+          Vincent pours generously. Pick a drink, take it to the floor.
+        </p>
+      </div>
+
+      {/* 3D bar scene */}
+      <div
+        className="relative overflow-hidden rounded-3xl border-2 border-primary/25 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.6)]"
+        style={{
+          perspective: "1400px",
+          background: "linear-gradient(to bottom, #1a0f0a 0%, #0c0805 100%)",
+        }}
+      >
+        {/* Ambient track-color glow */}
+        <motion.div
+          key={currentTrack.id}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute inset-0 pointer-events-none"
           style={{
-            background:
-              "radial-gradient(120% 80% at 50% 10%, #2a1a18 0%, #14090a 60%, #08050a 100%)",
+            background: `radial-gradient(ellipse at 50% 0%, ${currentTrack.glow} 0%, rgba(0,0,0,0) 60%)`,
+            transition: "background 800ms",
           }}
         />
-        {/* Shelf 1 silhouettes */}
-        <div className="absolute top-6 left-0 right-0 h-16 flex items-end justify-center gap-2 px-10 opacity-50">
-          {Array.from({ length: 14 }).map((_, i) => (
-            <div
-              key={i}
-              className="w-3 rounded-t-sm"
-              style={{
-                height: `${30 + ((i * 7) % 24)}px`,
-                background: `linear-gradient(to top, rgba(0,0,0,0.6), ${
-                  ["#7a3030", "#3a4a6a", "#5a3a18", "#6a4a30", "#3a3a4a"][i % 5]
-                })`,
-                opacity: 0.7,
-              }}
-            />
-          ))}
-        </div>
-        <div className="absolute top-[88px] left-6 right-6 h-[2px] bg-amber-900/50" />
 
-        {/* Shelf 2 silhouettes */}
-        <div className="absolute top-[100px] left-0 right-0 h-12 flex items-end justify-center gap-1.5 px-16 opacity-40">
-          {Array.from({ length: 18 }).map((_, i) => (
-            <div
-              key={i}
-              className="w-2.5 rounded-t-sm"
-              style={{
-                height: `${20 + ((i * 5) % 18)}px`,
-                background: `linear-gradient(to top, rgba(0,0,0,0.7), ${
-                  ["#5a3030", "#2a4a6a", "#4a3a18", "#5a3a20"][i % 4]
-                })`,
-              }}
-            />
-          ))}
-        </div>
-        <div className="absolute top-[156px] left-10 right-10 h-[2px] bg-amber-900/40" />
-
-        {/* Wood counter */}
+        {/* Back wall — receding bottle shelf with 3D tilt */}
         <div
-          className="absolute bottom-0 left-0 right-0 h-[42%]"
+          className="absolute left-0 right-0 top-0 h-[58%]"
           style={{
-            background:
-              "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 12%, #4a2a14 30%, #6a3a1a 70%, #2a1408 100%)",
+            transform: "rotateX(8deg)",
+            transformOrigin: "50% 100%",
           }}
-        />
-        {/* Counter top edge highlight */}
-        <div
-          className="absolute left-0 right-0 h-[3px] shadow-[0_4px_10px_rgba(0,0,0,0.6)]"
-          style={{ bottom: "42%", background: "rgba(255, 200, 120, 0.25)" }}
-        />
-
-        {/* Soft warm glow up top */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-amber-300/10 blur-2xl rounded-full pointer-events-none" />
-
-        {/* Foreground content grid */}
-        <div className="relative grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-4 p-5 sm:p-7 min-h-[480px]">
-          {/* Left: bartender */}
-          <div className="flex flex-col items-center justify-end relative">
-            {/* Order ticket sits above the bartender */}
-            <div className="absolute top-0 left-0 right-0 flex justify-center">
-              <OrderTicket recipe={recipe} />
+        >
+          {/* Wood paneling */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "repeating-linear-gradient(90deg, #2a1610 0 36px, #1a0f08 36px 72px)",
+              boxShadow: "inset 0 -40px 60px rgba(0,0,0,0.7)",
+            }}
+          />
+          {/* Bottle silhouettes (3 receding rows) */}
+          {[0, 1, 2].map((row) => (
+            <div
+              key={row}
+              className="absolute left-6 right-6 flex items-end gap-2.5 sm:gap-3.5"
+              style={{
+                bottom: 12 + row * 44,
+                opacity: 1 - row * 0.18,
+              }}
+            >
+              {Array.from({ length: 16 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="rounded-t-sm shrink-0"
+                  style={{
+                    width: row === 0 ? 16 : row === 1 ? 14 : 12,
+                    height: row === 0 ? 56 : row === 1 ? 48 : 40,
+                    background: `linear-gradient(to bottom, ${
+                      [
+                        "#5a3030",
+                        "#2a4a6a",
+                        "#4a3a18",
+                        "#5a3a20",
+                        "#3a2a4a",
+                      ][(i + row) % 5]
+                    }, ${
+                      [
+                        "#3a1818",
+                        "#1a3a5a",
+                        "#3a2a08",
+                        "#3a2a10",
+                        "#2a1a3a",
+                      ][(i + row) % 5]
+                    })`,
+                    boxShadow:
+                      "inset 0 -10px 14px rgba(0,0,0,0.6), 0 4px 8px rgba(0,0,0,0.5)",
+                  }}
+                />
+              ))}
+              {/* Shelf */}
+              <div className="absolute left-0 right-0 -bottom-2 h-[3px] bg-amber-900/60" />
             </div>
-            <div className="mt-24 sm:mt-28 w-full">
+          ))}
+          {/* Mirror reflection */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 top-3 w-[60%] h-[60%] rounded-md"
+            style={{
+              background:
+                "linear-gradient(to bottom, rgba(255,235,200,0.12), rgba(255,235,200,0.03))",
+              boxShadow: "inset 0 0 30px rgba(255,200,140,0.15)",
+            }}
+          />
+        </div>
+
+        {/* Counter — angled to give 3D depth */}
+        <div
+          className="absolute left-0 right-0 bottom-0 h-[44%]"
+          style={{
+            transform: "rotateX(-26deg)",
+            transformOrigin: "50% 0%",
+            background:
+              "linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, #4a2a14 18%, #6a3a1a 60%, #2a1408 100%)",
+            boxShadow: "inset 0 8px 20px rgba(255,200,120,0.15)",
+          }}
+        >
+          {/* Wood grain stripes */}
+          <div
+            className="absolute inset-0 opacity-30 pointer-events-none"
+            style={{
+              background:
+                "repeating-linear-gradient(0deg, rgba(0,0,0,0.2) 0 2px, rgba(255,255,255,0.04) 2px 14px)",
+            }}
+          />
+          {/* Front edge highlight */}
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-amber-300/30" />
+        </div>
+
+        {/* Foreground content */}
+        <div className="relative grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-6 p-5 sm:p-7 min-h-[460px]">
+          {/* Bartender column */}
+          <div className="flex flex-col items-center justify-end relative">
+            <AnimatePresence>
+              {tipped && (
+                <motion.div
+                  initial={{ opacity: 0, y: 0 }}
+                  animate={{ opacity: 1, y: -28 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute top-12 px-3 py-1 rounded-full bg-amber-400/90 text-zinc-900 text-xs font-bold border border-amber-700"
+                >
+                  Vincent: "Much obliged."
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div className="mt-16 sm:mt-20 w-full">
               <Bartender mood={mood} />
             </div>
-            {/* Bartender's name plate */}
             <div className="mt-2 text-center">
               <div className="text-[10px] uppercase tracking-[0.3em] text-primary/70">
                 On the rail
               </div>
-              <div className="font-serif text-lg text-foreground">
-                Vincent
-              </div>
+              <div className="font-serif text-lg text-foreground">Vincent</div>
             </div>
           </div>
 
-          {/* Right: glass + bottles + actions */}
+          {/* Glass + cocktail menu */}
           <div className="flex flex-col items-center justify-end gap-5">
-            {/* Result overlay */}
-            <AnimatePresence>
-              {lastResult && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className={cn(
-                    "px-4 py-2 rounded-xl border text-center min-w-[220px]",
-                    lastResult.accuracy >= 80
-                      ? "border-emerald-400/50 bg-emerald-500/10"
-                      : lastResult.accuracy >= 40
-                        ? "border-amber-400/50 bg-amber-500/10"
-                        : "border-rose-400/50 bg-rose-500/10",
-                  )}
-                >
-                  <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Accuracy
-                  </div>
-                  <div className="font-mono text-2xl font-bold tabular-nums">
-                    {lastResult.accuracy}%
-                  </div>
-                  <div className="text-xs text-foreground/80">
-                    {lastResult.tip > 0
-                      ? `Tip +${lastResult.tip} chips`
-                      : "No tip this time."}
-                    {lastResult.granted && " · Drink earned"}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Glass */}
-            <Glass pours={orderedPours} shake={shake} />
-
-            {/* Pour log strip */}
-            <div className="w-full max-w-md">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 text-center">
-                In the glass
-              </div>
-              <div className="flex items-center justify-center gap-1.5 flex-wrap min-h-[24px]">
-                {orderedPours.length === 0 && (
-                  <span className="text-xs italic text-muted-foreground">
-                    Empty. Tap a bottle to pour.
-                  </span>
-                )}
-                {orderedPours.map((p, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-background/50 border border-primary/15 text-[11px]"
+            <CocktailGlass color={glassColor} pouring={pouring} />
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 w-full max-w-md">
+              {RECIPES.map((r) => {
+                const shop = shopItemForRecipe(r.id);
+                if (!shop) return null;
+                const Icon = shop.icon;
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => order(r)}
+                    disabled={pouring}
+                    className={cn(
+                      "group relative text-left rounded-xl border border-primary/25 bg-background/40 hover:bg-background/60 hover:border-primary/60 disabled:opacity-50 p-3 transition-all hover:-translate-y-0.5",
+                    )}
                   >
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ background: p.ingredient.hex }}
-                    />
-                    {p.units} × {p.ingredient.name}
-                  </div>
-                ))}
-              </div>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-lg bg-background/60 border border-primary/30 flex items-center justify-center shrink-0">
+                        <Icon className={cn("w-5 h-5", shop.color)} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold leading-tight truncate">
+                          {r.name}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          {r.vibe}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-1.5 text-[10px] text-emerald-300/90 uppercase tracking-wider">
+                      Free · +{Math.round((shop.multiplier - 1) * 100)}% × {shop.uses} win
+                      {shop.uses === 1 ? "" : "s"}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Bottles */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 w-full max-w-md">
-              {INGREDIENTS.map((ing) => (
-                <Bottle
-                  key={ing.id}
-                  ing={ing}
-                  poured={pours[ing.id] ?? 0}
-                  onClick={() => pour(ing)}
-                  disabled={totalUnits >= MAX_GLASS_UNITS}
-                />
-              ))}
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2 flex-wrap justify-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={reset}
-                disabled={totalUnits === 0}
-                className="border-primary/30"
-              >
-                <Trash2 className="w-4 h-4 mr-1.5" />
-                Dump
-              </Button>
-              {lastResult ? (
-                <Button
-                  size="lg"
-                  onClick={next}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 px-8"
-                >
-                  <RefreshCcw className="w-4 h-4 mr-2" />
-                  Next order
-                </Button>
-              ) : (
-                <Button
-                  size="lg"
-                  onClick={serve}
-                  disabled={totalUnits === 0}
-                  className="bg-gradient-to-b from-primary to-primary/80 text-primary-foreground hover:from-primary px-8 shadow-lg shadow-primary/30"
-                >
-                  <GlassWater className="w-4 h-4 mr-2" />
-                  Serve
-                </Button>
-              )}
+            <div className="text-[11px] text-muted-foreground italic text-center max-w-md">
+              No money. No score. Pour as many as you like — every cocktail
+              lands on your tab as a real boost.
             </div>
           </div>
         </div>
       </div>
 
-      {/* --- Stats + tab --- */}
+      {/* Jukebox + chatter row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="casino-card p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Music className="w-4 h-4 text-primary" />
+            <h2 className="font-serif text-lg">The Jukebox</h2>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground ml-auto">
+              Now playing · {currentTrack.artist}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {TRACKS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => handleJukebox(t)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg border transition-all",
+                  currentTrack.id === t.id
+                    ? "border-primary/60 bg-primary/10"
+                    : "border-primary/15 bg-background/40 hover:border-primary/30",
+                )}
+              >
+                <div
+                  className="w-8 h-8 rounded-full border border-amber-400/40 shrink-0"
+                  style={{
+                    background: `radial-gradient(circle at 35% 35%, hsl(${t.hue} 70% 70%), hsl(${t.hue} 60% 25%))`,
+                  }}
+                />
+                <div className="text-left min-w-0">
+                  <div className="text-sm font-semibold truncate">{t.name}</div>
+                  <div className="text-[11px] text-muted-foreground truncate">
+                    {t.artist}
+                  </div>
+                </div>
+                {currentTrack.id === t.id && (
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 1.4, repeat: Infinity }}
+                    className="ml-auto w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]"
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="casino-card p-5 relative overflow-hidden">
+          <div className="flex items-center gap-2 mb-3">
+            <HeartHandshake className="w-4 h-4 text-primary" />
+            <h2 className="font-serif text-lg">From a stool nearby</h2>
+          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={chatter.line}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.4 }}
+              className="text-base italic text-foreground/85 leading-relaxed"
+            >
+              "{chatter.line}"
+            </motion.div>
+          </AnimatePresence>
+          <div className="text-xs text-muted-foreground mt-2">
+            — {chatter.name}, three drinks in
+          </div>
+        </div>
+      </div>
+
+      {/* Stats + tab */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-4">
         <div className="casino-card p-5 space-y-3">
           <div className="flex items-center gap-2">
             <Wine className="w-4 h-4 text-primary" />
             <h2 className="font-serif text-lg">Behind the bar</h2>
           </div>
-          <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="grid grid-cols-2 gap-3 text-center">
             <div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Served
+                Drinks Poured
               </div>
               <div className="font-mono text-xl tabular-nums">
                 {bar.served}
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Tips
-              </div>
-              <div className="font-mono text-xl tabular-nums text-emerald-300">
-                +{bar.tipsEarned}
               </div>
             </div>
             <div>
@@ -871,8 +662,8 @@ export default function Bar() {
             </div>
           </div>
           <div className="text-xs text-muted-foreground italic">
-            Hit 80%+ accuracy to earn the matching cocktail on your tab.
-            Use it before your next casino bet for a bigger payout.
+            Drinks are on Vincent. Use one before any bet for a multiplier on
+            the next win.
           </div>
         </div>
 
@@ -892,13 +683,12 @@ export default function Bar() {
           </div>
           {tabDrinks.length === 0 ? (
             <div className="text-sm text-muted-foreground italic">
-              No drinks on your tab yet. Mix one above (or grab one from the
-              store) and use it before a bet.
+              No drinks on your tab yet. Order one above (or grab one from the
+              store).
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {tabDrinks.map(({ recipe: r, shop, qty }) => {
-                if (!shop) return null;
                 const Icon = shop.icon;
                 return (
                   <div
@@ -933,6 +723,7 @@ export default function Bar() {
                         })
                       }
                     >
+                      <GlassWater className="w-3.5 h-3.5 mr-1" />
                       Use
                     </Button>
                   </div>
@@ -942,7 +733,7 @@ export default function Bar() {
           )}
           <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-primary/10">
             <Coins className="w-3.5 h-3.5 text-primary" />
-            Want more on tap? Visit the{" "}
+            Want a permanent stash? Pick some up at the{" "}
             <a
               href={`${import.meta.env.BASE_URL}store`}
               className="text-primary hover:underline"

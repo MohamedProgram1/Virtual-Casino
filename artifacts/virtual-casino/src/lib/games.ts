@@ -12,6 +12,10 @@ import {
   KeyRound,
   Coins,
   Ticket,
+  Gem,
+  Club,
+  Sparkles,
+  Lock,
   type LucideIcon,
 } from "lucide-react";
 import type { GameType } from "./store";
@@ -29,7 +33,11 @@ export const GAME_LABELS: Record<GameType, string> = {
   keno: "Keno",
   coinflip: "Coin Flip",
   scratch: "Scratch Card",
+  baccarat: "Baccarat",
+  poker: "Five-Card Draw",
+  pachinko: "Pachinko",
   ownerVault: "Owner's Vault",
+  ownerSafe: "Owner's Safe",
 };
 
 export const GAME_ROUTES: Record<GameType, string> = {
@@ -45,7 +53,11 @@ export const GAME_ROUTES: Record<GameType, string> = {
   keno: "/keno",
   coinflip: "/coin-flip",
   scratch: "/scratch",
+  baccarat: "/baccarat",
+  poker: "/poker",
+  pachinko: "/pachinko",
   ownerVault: "/owner-vault",
+  ownerSafe: "/owner-safe",
 };
 
 export const GAME_ICONS: Record<GameType, LucideIcon> = {
@@ -61,5 +73,9 @@ export const GAME_ICONS: Record<GameType, LucideIcon> = {
   keno: Hash,
   coinflip: Coins,
   scratch: Ticket,
+  baccarat: Gem,
+  poker: Club,
+  pachinko: Sparkles,
   ownerVault: KeyRound,
+  ownerSafe: Lock,
 };

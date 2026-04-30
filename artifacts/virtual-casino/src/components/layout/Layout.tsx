@@ -27,6 +27,7 @@ const STATIC_TITLES: Record<string, string> = {
   "/settings": "Settings",
   "/store": "The Vault Store",
   "/bar": "The Back Room Bar",
+  "/loan-shark": "Loan Shark & Pawn",
 };
 
 const GAME_PAGE_TITLES: Record<string, string> = {
@@ -42,7 +43,11 @@ const GAME_PAGE_TITLES: Record<string, string> = {
   "/keno": GAME_LABELS.keno,
   "/coin-flip": GAME_LABELS.coinflip,
   "/scratch": GAME_LABELS.scratch,
+  "/baccarat": GAME_LABELS.baccarat,
+  "/poker": GAME_LABELS.poker,
+  "/pachinko": GAME_LABELS.pachinko,
   "/owner-vault": GAME_LABELS.ownerVault,
+  "/owner-safe": GAME_LABELS.ownerSafe,
 };
 
 const PAGE_TITLES: Record<string, string> = {

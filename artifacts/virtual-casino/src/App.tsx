@@ -18,7 +18,12 @@ import HiLo from "@/pages/HiLo";
 import Keno from "@/pages/Keno";
 import CoinFlip from "@/pages/CoinFlip";
 import Scratch from "@/pages/Scratch";
+import Baccarat from "@/pages/Baccarat";
+import Poker from "@/pages/Poker";
+import Pachinko from "@/pages/Pachinko";
 import OwnerVault from "@/pages/OwnerVault";
+import OwnerSafe from "@/pages/OwnerSafe";
+import LoanShark from "@/pages/LoanShark";
 import Store from "@/pages/Store";
 import Bar from "@/pages/Bar";
 import History from "@/pages/History";
@@ -44,7 +49,12 @@ function Router() {
         <Route path="/keno" component={Keno} />
         <Route path="/coin-flip" component={CoinFlip} />
         <Route path="/scratch" component={Scratch} />
+        <Route path="/baccarat" component={Baccarat} />
+        <Route path="/poker" component={Poker} />
+        <Route path="/pachinko" component={Pachinko} />
         <Route path="/owner-vault" component={OwnerVault} />
+        <Route path="/owner-safe" component={OwnerSafe} />
+        <Route path="/loan-shark" component={LoanShark} />
         <Route path="/store" component={Store} />
         <Route path="/bar" component={Bar} />
         <Route path="/history" component={History} />

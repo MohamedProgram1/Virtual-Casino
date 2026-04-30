@@ -14,6 +14,7 @@ import {
   KeyRound,
   ShoppingBag,
   Wine,
+  Skull,
 } from "lucide-react";
 import { useCasinoStore, GameType } from "@/lib/store";
 import {
@@ -114,10 +115,35 @@ const GAME_CARDS: GameCard[] = [
     accent: "from-pink-500/20 to-rose-900/10",
   },
   {
+    id: "baccarat",
+    tagline: "Player. Banker. Tie. That's the night.",
+    blurb: "Punto Banco. Bet a side, take a sip, watch the cards fall.",
+    accent: "from-emerald-500/20 to-amber-900/10",
+  },
+  {
+    id: "poker",
+    tagline: "Five cards. One draw. Jacks or better pays.",
+    blurb: "Hold the keepers, draw the rest. Royal flush = 800×.",
+    accent: "from-blue-500/20 to-indigo-900/10",
+  },
+  {
+    id: "pachinko",
+    tagline: "Drop a ball. Listen to the chimes.",
+    blurb: "Eleven buckets, two 50× lanes at the edge, one heart-stopping zero in the middle.",
+    accent: "from-purple-500/20 to-fuchsia-900/10",
+  },
+  {
     id: "ownerVault",
     tagline: "The owner's private game. Risk and reward.",
     blurb: "Five vaults — some pay, some don't. Pick wisely; the house is honest now.",
     accent: "from-amber-400/30 to-amber-900/15",
+    ownerOnly: true,
+  },
+  {
+    id: "ownerSafe",
+    tagline: "Crack the combo. Empty the safe.",
+    blurb: "Four-digit combination, eight tries, hot/cold feedback. Only the owner gets a turn.",
+    accent: "from-amber-300/30 to-zinc-900/30",
     ownerOnly: true,
   },
 ];
@@ -627,6 +653,35 @@ export default function Lobby() {
                   <div className="text-sm text-muted-foreground">
                     Cocktails and charms that boost the next win. Skip the
                     bartending if you'd rather just pay for the ammo.
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </Link>
+
+          <Link href="/loan-shark">
+            <motion.div
+              whileHover={{ y: -3 }}
+              className="group relative casino-card p-6 cursor-pointer hover:border-rose-400/50 transition-all overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-rose-500/20 via-rose-900/10 to-zinc-900/10 opacity-80 pointer-events-none" />
+              <div className="absolute -bottom-6 -right-4 opacity-25 group-hover:opacity-40 transition-opacity">
+                <Skull className="w-32 h-32 text-rose-300" />
+              </div>
+              <div className="relative flex items-start gap-4">
+                <div className="w-14 h-14 rounded-xl bg-background/60 border border-rose-400/40 flex items-center justify-center shrink-0 group-hover:border-rose-300 transition-colors">
+                  <Skull className="w-7 h-7 text-rose-300" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <span className="font-serif text-xl">Loan Shark & Pawn</span>
+                  </div>
+                  <div className="text-sm text-primary/80 italic mb-2">
+                    Stake yourself. Or sell the watch.
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Borrow chips at compounding rates, or pawn what's on your
+                    tab for fast money. No credit check.
                   </div>
                 </div>
               </div>

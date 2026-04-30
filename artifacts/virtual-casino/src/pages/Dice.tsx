@@ -6,6 +6,7 @@ import { Slider } from "@/components/ui/slider";
 import { useCasinoStore } from "@/lib/store";
 import { isVipUnlocked } from "@/lib/levels";
 import { VipToggle } from "@/components/VipToggle";
+import { playSound } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 
 const HOUSE_EDGE_STD = 0.01;
@@ -69,20 +70,137 @@ function DieFace({
 }
 
 function RollingDice({ size = 100 }: { size?: number }) {
-  const [face, setFace] = useState(1);
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setFace(Math.floor(Math.random() * 6) + 1);
-    }, 80);
-    return () => clearInterval(interval);
-  }, []);
+  // Tumble the cube continuously while the roll resolves.
+  const half = size / 2;
+  const faceStyle: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    backfaceVisibility: "hidden",
+  };
   return (
-    <motion.div
-      animate={{ rotate: [0, -12, 12, -8, 8, 0], scale: [1, 1.05, 1] }}
-      transition={{ repeat: Infinity, duration: 0.4, ease: "easeInOut" }}
+    <div
+      style={{
+        width: size,
+        height: size,
+        perspective: 700,
+        filter:
+          "drop-shadow(0 18px 22px rgba(0,0,0,0.55)) drop-shadow(0 4px 6px rgba(0,0,0,0.4))",
+      }}
     >
-      <DieFace value={face} size={size} />
-    </motion.div>
+      <motion.div
+        animate={{ rotateX: [0, 360, 720, 1080], rotateY: [0, 360, 0, -360] }}
+        transition={{ duration: 1.2, ease: "linear", repeat: Infinity }}
+        style={{
+          width: size,
+          height: size,
+          position: "relative",
+          transformStyle: "preserve-3d",
+        }}
+      >
+        <div style={{ ...faceStyle, transform: `translateZ(${half}px)` }}>
+          <DieFace value={1} size={size} />
+        </div>
+        <div style={{ ...faceStyle, transform: `rotateY(180deg) translateZ(${half}px)` }}>
+          <DieFace value={6} size={size} />
+        </div>
+        <div style={{ ...faceStyle, transform: `rotateY(90deg) translateZ(${half}px)` }}>
+          <DieFace value={2} size={size} />
+        </div>
+        <div style={{ ...faceStyle, transform: `rotateY(-90deg) translateZ(${half}px)` }}>
+          <DieFace value={5} size={size} />
+        </div>
+        <div style={{ ...faceStyle, transform: `rotateX(90deg) translateZ(${half}px)` }}>
+          <DieFace value={3} size={size} />
+        </div>
+        <div style={{ ...faceStyle, transform: `rotateX(-90deg) translateZ(${half}px)` }}>
+          <DieFace value={4} size={size} />
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Dice3D — CSS 3D cube with all six faces. Rotates to land on `value`.       */
+/* -------------------------------------------------------------------------- */
+
+// Rotation that brings each face value to the front of the cube.
+const FACE_ROTATIONS: Record<number, { x: number; y: number }> = {
+  1: { x: 0, y: 0 },
+  6: { x: 0, y: 180 },
+  2: { x: 0, y: -90 },
+  5: { x: 0, y: 90 },
+  3: { x: -90, y: 0 },
+  4: { x: 90, y: 0 },
+};
+
+function Dice3D({
+  value,
+  size = 100,
+  rolling = false,
+  won,
+}: {
+  value: number;
+  size?: number;
+  rolling?: boolean;
+  won?: boolean;
+}) {
+  const target = FACE_ROTATIONS[value] ?? FACE_ROTATIONS[1];
+  // When rolling, layer multiple full turns onto the target rotation so the
+  // cube tumbles dramatically before settling on the right face.
+  const animateRotate = rolling
+    ? { rotateX: target.x + 720, rotateY: target.y + 720 }
+    : { rotateX: target.x, rotateY: target.y };
+  const half = size / 2;
+  const faceStyle: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    backfaceVisibility: "hidden",
+  };
+  return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        perspective: 700,
+        filter:
+          "drop-shadow(0 18px 22px rgba(0,0,0,0.5)) drop-shadow(0 4px 6px rgba(0,0,0,0.4))",
+      }}
+    >
+      <motion.div
+        animate={animateRotate}
+        transition={{
+          duration: rolling ? 1.0 : 0.4,
+          ease: rolling ? [0.2, 0.6, 0.3, 1] : "easeOut",
+          repeat: rolling ? Infinity : 0,
+        }}
+        style={{
+          width: size,
+          height: size,
+          position: "relative",
+          transformStyle: "preserve-3d",
+        }}
+      >
+        <div style={{ ...faceStyle, transform: `translateZ(${half}px)` }}>
+          <DieFace value={1} size={size} won={won} />
+        </div>
+        <div style={{ ...faceStyle, transform: `rotateY(180deg) translateZ(${half}px)` }}>
+          <DieFace value={6} size={size} won={won} />
+        </div>
+        <div style={{ ...faceStyle, transform: `rotateY(90deg) translateZ(${half}px)` }}>
+          <DieFace value={2} size={size} won={won} />
+        </div>
+        <div style={{ ...faceStyle, transform: `rotateY(-90deg) translateZ(${half}px)` }}>
+          <DieFace value={5} size={size} won={won} />
+        </div>
+        <div style={{ ...faceStyle, transform: `rotateX(90deg) translateZ(${half}px)` }}>
+          <DieFace value={3} size={size} won={won} />
+        </div>
+        <div style={{ ...faceStyle, transform: `rotateX(-90deg) translateZ(${half}px)` }}>
+          <DieFace value={4} size={size} won={won} />
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -112,6 +230,7 @@ export default function Dice() {
     setRolling(true);
     setLastRoll(null);
     setLastWin(null);
+    playSound("dice");
 
     const result = Math.floor(Math.random() * 100) + 1;
     const won = direction === "under" ? result < target : result > target;
@@ -152,20 +271,19 @@ export default function Dice() {
             ) : lastRoll !== null ? (
               <motion.div
                 key={`result-${lastRoll}`}
-                initial={{ scale: 0.4, opacity: 0, rotate: -20 }}
-                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                initial={{ scale: 0.4, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 220, damping: 14 }}
               >
-                <DieFace
+                <Dice3D
                   value={displayFace}
                   size={110}
-                  glowing
                   won={lastWin ?? undefined}
                 />
               </motion.div>
             ) : (
-              <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 0.35 }}>
-                <DieFace value={1} size={110} />
+              <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 0.5 }}>
+                <Dice3D value={1} size={110} />
               </motion.div>
             )}
           </AnimatePresence>

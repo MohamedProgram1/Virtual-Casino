@@ -20,6 +20,9 @@ import {
   updateChallenge,
   type DailyChallengeState,
 } from "./dailyChallenges";
+import { playSound, setSoundMuted } from "./sounds";
+import type { Loan } from "./loans";
+import { owedFor } from "./loans";
 
 export type GameType =
   | "slots"
@@ -34,7 +37,11 @@ export type GameType =
   | "keno"
   | "coinflip"
   | "scratch"
-  | "ownerVault";
+  | "baccarat"
+  | "poker"
+  | "pachinko"
+  | "ownerVault"
+  | "ownerSafe";
 
 export interface BetMeta {
   multiplier?: number;
@@ -98,6 +105,8 @@ export interface CasinoState {
   /** The currently active boost. Only one boost may be active at a time. */
   activeBoost: ActiveBoost | null;
   bar: BarStats;
+  /** Outstanding loan from the loan shark, or null if clean. */
+  loan: Loan | null;
 }
 
 interface CasinoContextType extends CasinoState {
@@ -133,6 +142,12 @@ interface CasinoContextType extends CasinoState {
     grantItemId?: string;
     grantItemName?: string;
   }) => void;
+  /** Borrow chips from the loan shark. Replaces any existing loan. */
+  takeLoan: (principal: number, dailyRate: number) => boolean;
+  /** Pay down the outstanding loan balance. Pass `Infinity` to clear it. */
+  repayLoan: (amount: number) => boolean;
+  /** Sell an inventory item back to the pawn shop for chips. */
+  pawnItem: (itemId: string, value: number, name: string) => boolean;
 }
 
 const STARTING_BALANCE = 1000;
@@ -160,6 +175,7 @@ const DEFAULT_STATE: CasinoState = {
   inventory: {},
   activeBoost: null,
   bar: { served: 0, tipsEarned: 0 },
+  loan: null,
 };
 
 const STORAGE_KEY = "lucky_vault_casino_state";
@@ -183,6 +199,7 @@ function migrate(stored: Partial<CasinoState>): CasinoState {
     inventory: stored.inventory ?? {},
     activeBoost: stored.activeBoost ?? null,
     bar: { ...DEFAULT_STATE.bar, ...(stored.bar ?? {}) },
+    loan: stored.loan ?? null,
   };
 }
 
@@ -202,6 +219,11 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
+
+  // Keep the sound module in sync with the user setting.
+  useEffect(() => {
+    setSoundMuted(!state.settings.soundEnabled);
+  }, [state.settings.soundEnabled]);
 
   // Reset daily challenges on day change
   useEffect(() => {
@@ -347,6 +369,13 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
       // Lowest balance tracking (uses pre-bonus balance so dips count)
       const finalBalance = newBalance + bonusFromChallenges;
       const lowestBalance = Math.min(prev.lowestBalance, newBalance);
+
+      // Sound effect on resolution (respects settings.soundEnabled via setSoundMuted)
+      if (amount > 0) {
+        if (effectivePayout >= amount * 10) playSound("bigWin");
+        else if (effectivePayout > amount) playSound("win");
+        else if (effectivePayout === 0) playSound("lose");
+      }
 
       // Side-effect toasts (deferred). Use the boosted payout for the headline,
       // but call out the bonus separately so the player sees what the drink did.
@@ -531,6 +560,111 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const takeLoan = (principal: number, dailyRate: number): boolean => {
+    let success = false;
+    setState((prev) => {
+      if (prev.loan) {
+        setTimeout(
+          () =>
+            toast.error("You already have a loan out.", {
+              description: "Settle it before signing for another.",
+            }),
+          0,
+        );
+        return prev;
+      }
+      if (principal <= 0) return prev;
+      success = true;
+      setTimeout(
+        () =>
+          toast.success(`Loan signed: +${principal} chips`, {
+            description: `${Math.round(dailyRate * 100)}% per day. Don't be late.`,
+          }),
+        0,
+      );
+      return {
+        ...prev,
+        balance: prev.balance + principal,
+        loan: { principal, takenAt: Date.now(), dailyRate },
+      };
+    });
+    return success;
+  };
+
+  const repayLoan = (amount: number): boolean => {
+    let success = false;
+    setState((prev) => {
+      if (!prev.loan) {
+        setTimeout(() => toast.error("No loan to repay."), 0);
+        return prev;
+      }
+      const owed = owedFor(prev.loan);
+      const pay = Math.min(prev.balance, Math.max(1, Math.floor(amount)), owed);
+      if (pay <= 0) {
+        setTimeout(() => toast.error("Not enough chips to make a payment."), 0);
+        return prev;
+      }
+      success = true;
+      const newOwed = owed - pay;
+      if (newOwed <= 0) {
+        setTimeout(
+          () =>
+            toast.success("Loan paid in full.", {
+              description: "The shark smiles. Don't get used to it.",
+            }),
+          0,
+        );
+        return { ...prev, balance: prev.balance - pay, loan: null };
+      }
+      // Fold the remaining debt back into a fresh "principal" so interest
+      // continues to compound from this moment, on the new lower amount.
+      setTimeout(
+        () =>
+          toast.success(`Paid −${pay} chips`, {
+            description: `${newOwed} still owed.`,
+          }),
+        0,
+      );
+      return {
+        ...prev,
+        balance: prev.balance - pay,
+        loan: {
+          principal: newOwed,
+          takenAt: Date.now(),
+          dailyRate: prev.loan.dailyRate,
+        },
+      };
+    });
+    return success;
+  };
+
+  const pawnItem = (itemId: string, value: number, name: string): boolean => {
+    let success = false;
+    setState((prev) => {
+      const owned = prev.inventory[itemId] ?? 0;
+      if (owned <= 0) {
+        setTimeout(() => toast.error("Nothing to pawn."), 0);
+        return prev;
+      }
+      success = true;
+      const inventory = { ...prev.inventory, [itemId]: owned - 1 };
+      if (inventory[itemId] === 0) delete inventory[itemId];
+      setTimeout(
+        () =>
+          toast.success(`Pawned ${name}`, {
+            description: `+${value} chips`,
+          }),
+        0,
+      );
+      return {
+        ...prev,
+        inventory,
+        balance: prev.balance + value,
+      };
+    });
+    return success;
+  };
+
   const refill = () => {
     setState((prev) => {
       const now = Date.now();
@@ -645,6 +779,9 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         purchaseItem,
         activateItem,
         serveDrink,
+        takeLoan,
+        repayLoan,
+        pawnItem,
       }}
     >
       {children}

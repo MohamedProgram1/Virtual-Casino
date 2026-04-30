@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useCasinoStore } from "@/lib/store";
 import { useRegisterPlayAgain } from "@/lib/playAgain";
+import { playSound } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 
 interface Segment {
@@ -98,6 +99,7 @@ export default function Wheel() {
     if (spinning || balance < bet) return;
     setResult(null);
     setSpinning(true);
+    playSound("spin");
 
     const idx = Math.floor(Math.random() * N);
     const seg = SEGMENTS[idx];
@@ -138,10 +140,20 @@ export default function Wheel() {
       </div>
 
       {/* Wheel */}
-      <div className="casino-card p-4 sm:p-8 relative overflow-hidden">
+      <div className="casino-card p-4 sm:p-8 relative overflow-hidden" style={{ perspective: "1300px" }}>
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
 
-        <div className="relative mx-auto" style={{ width: SVG_SIZE, height: SVG_SIZE + 40 }}>
+        <div
+          className="relative mx-auto"
+          style={{
+            width: SVG_SIZE,
+            height: SVG_SIZE + 40,
+            transform: "rotateX(24deg)",
+            transformStyle: "preserve-3d",
+            filter:
+              "drop-shadow(0 30px 30px rgba(0,0,0,0.55)) drop-shadow(0 6px 10px rgba(0,0,0,0.45))",
+          }}
+        >
           {/* Outer decorative ring */}
           <div
             className="absolute inset-0 rounded-full pointer-events-none"
