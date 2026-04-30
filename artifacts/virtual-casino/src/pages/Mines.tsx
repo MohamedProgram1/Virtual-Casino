@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bomb, Gem, Coins, RotateCcw } from "lucide-react";
+import { Coins, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useCasinoStore } from "@/lib/store";
@@ -48,9 +48,10 @@ export default function Mines() {
   const safeRevealed = revealed.size;
   const currentMult = multiplierFor(safeRevealed, activeMineCount);
   const currentPayout = Math.floor(activeBet * currentMult);
-  const nextStepGain = active && safeRevealed < GRID_SIZE - activeMineCount
-    ? nextGain(safeRevealed, activeMineCount, activeBet)
-    : 0;
+  const nextStepGain =
+    active && safeRevealed < GRID_SIZE - activeMineCount
+      ? nextGain(safeRevealed, activeMineCount, activeBet)
+      : 0;
 
   const startGame = () => {
     if (balance < bet) return;
@@ -72,7 +73,6 @@ export default function Mines() {
     if (revealed.has(i)) return;
 
     if (mines.has(i)) {
-      // Bust
       setExploded(i);
       setActive(false);
       placeBet("mines", activeBet, 0, {
@@ -85,7 +85,6 @@ export default function Mines() {
       const next = new Set(revealed);
       next.add(i);
       setRevealed(next);
-      // Auto cash-out if all safe tiles revealed
       if (next.size === GRID_SIZE - activeMineCount) {
         const finalMult = multiplierFor(next.size, activeMineCount);
         const finalPayout = Math.floor(activeBet * finalMult);
@@ -141,53 +140,48 @@ export default function Mines() {
 
       {/* Status bar */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="casino-card p-3 text-center">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Multiplier
-          </div>
-          <div className="font-mono text-xl text-primary tabular-nums">
-            {active ? currentMult.toFixed(2) : "—"}×
-          </div>
-        </div>
-        <div className="casino-card p-3 text-center">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Profit
-          </div>
-          <div
-            className={cn(
-              "font-mono text-xl tabular-nums",
-              active && currentPayout > activeBet
-                ? "text-emerald-400"
-                : "text-foreground",
-            )}
-          >
-            {active
+        {[
+          {
+            label: "Multiplier",
+            value: active ? `${currentMult.toFixed(2)}×` : "—",
+            color: "text-primary",
+          },
+          {
+            label: "Profit",
+            value: active
               ? currentPayout > activeBet
                 ? `+${currentPayout - activeBet}`
                 : "0"
-              : "—"}
+              : "—",
+            color: active && currentPayout > activeBet ? "text-emerald-400" : "text-foreground",
+          },
+          {
+            label: "Next Tile",
+            value: active ? `+${nextStepGain}` : "—",
+            color: "text-primary/70",
+          },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="casino-card p-3 text-center">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {label}
+            </div>
+            <div className={cn("font-mono text-xl tabular-nums", color)}>{value}</div>
           </div>
-        </div>
-        <div className="casino-card p-3 text-center">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Next Tile
-          </div>
-          <div className="font-mono text-xl text-primary/70 tabular-nums">
-            {active ? `+${nextStepGain}` : "—"}
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Grid */}
       <div className="casino-card p-4 sm:p-6 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
-        <div className="grid grid-cols-5 gap-2 sm:gap-3 max-w-md mx-auto">
+        <div className="grid grid-cols-5 gap-2 sm:gap-2.5 max-w-md mx-auto">
           {Array.from({ length: GRID_SIZE }, (_, i) => {
             const isRevealedSafe = revealed.has(i);
             const isMine = mines.has(i);
             const showAll = !active && (exploded !== null || lastResult !== null);
-            const showMine = isMine && (i === exploded || (showAll && lastResult?.busted));
-            const showSafe = isRevealedSafe || (showAll && !isMine && lastResult?.busted);
+            const showMine =
+              isMine && (i === exploded || (showAll && lastResult?.busted));
+            const showSafe =
+              isRevealedSafe || (showAll && !isMine && lastResult?.busted);
 
             const state: TileState = showMine
               ? "mine"
@@ -219,11 +213,11 @@ export default function Mines() {
               >
                 {lastResult.busted ? (
                   <div className="font-serif text-2xl text-rose-400">
-                    Boom. Lost {lastResult.bet}.
+                    💥 Boom! Lost {lastResult.bet} chips.
                   </div>
                 ) : (
                   <div className="font-serif text-2xl text-emerald-400">
-                    Cashed out {lastResult.mult}× ·{" "}
+                    💰 Cashed {lastResult.mult}× ·{" "}
                     {lastResult.payout > lastResult.bet ? "+" : ""}
                     {lastResult.payout - lastResult.bet}
                   </div>
@@ -250,7 +244,7 @@ export default function Mines() {
             size="lg"
             onClick={cashOut}
             disabled={safeRevealed === 0}
-            className="h-14 font-serif bg-gradient-to-b from-emerald-500 to-emerald-600 text-white hover:from-emerald-600"
+            className="h-14 font-serif bg-gradient-to-b from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 shadow-lg shadow-emerald-500/20"
           >
             <Coins className="w-4 h-4 mr-2" />
             Cash Out {currentPayout > 0 ? `(${currentPayout})` : ""}
@@ -287,7 +281,7 @@ export default function Mines() {
 
           <div className="flex items-center justify-between pt-2">
             <div className="text-sm text-muted-foreground flex items-center gap-2">
-              <Bomb className="w-4 h-4" />
+              <span className="text-lg">💣</span>
               Mines
             </div>
             <div className="font-mono text-2xl text-rose-400 tabular-nums">{mineCount}</div>
@@ -317,7 +311,7 @@ export default function Mines() {
             onClick={startGame}
             className="w-full h-14 text-lg font-serif bg-gradient-to-b from-primary to-primary/80 text-primary-foreground"
           >
-            <Gem className="w-5 h-5 mr-2" />
+            <span className="mr-2 text-lg">💎</span>
             {balance < bet ? "Insufficient Chips" : "Play"}
           </Button>
         </div>
@@ -339,51 +333,65 @@ function Tile({ state, isExploded, disabled, onClick }: TileProps) {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      whileHover={!disabled ? { scale: 1.05 } : undefined}
-      whileTap={!disabled ? { scale: 0.95 } : undefined}
+      whileHover={!disabled && state === "hidden" ? { scale: 1.08, y: -2 } : undefined}
+      whileTap={!disabled && state === "hidden" ? { scale: 0.92 } : undefined}
       animate={
         isExploded
-          ? { scale: [1, 1.2, 1], rotate: [0, -8, 8, 0] }
-          : { scale: 1 }
+          ? { scale: [1, 1.3, 0.95, 1.05, 1], rotate: [0, -10, 10, -5, 0] }
+          : state === "safe"
+            ? { scale: [0.7, 1.1, 1] }
+            : { scale: 1 }
       }
-      transition={{ duration: 0.4 }}
+      transition={{ duration: isExploded ? 0.6 : 0.35 }}
       className={cn(
-        "aspect-square rounded-lg border flex items-center justify-center transition-colors",
+        "aspect-square rounded-xl border-2 flex items-center justify-center transition-colors relative overflow-hidden",
         state === "hidden" &&
-          "bg-gradient-to-b from-card to-background border-primary/20 hover:border-primary/50 cursor-pointer",
+          "bg-gradient-to-b from-zinc-700/80 to-zinc-800/80 border-zinc-600/60 hover:border-primary/60 cursor-pointer hover:from-zinc-600/80",
         state === "safe" &&
-          "bg-gradient-to-b from-emerald-500/30 to-emerald-700/20 border-emerald-500/50",
-        state === "mine" && !isExploded &&
-          "bg-gradient-to-b from-rose-900/40 to-rose-950/30 border-rose-500/30 opacity-70",
-        state === "mine" && isExploded &&
-          "bg-gradient-to-b from-rose-500 to-rose-700 border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.6)]",
-        disabled && state === "hidden" && "opacity-50 cursor-not-allowed",
+          "bg-gradient-to-b from-emerald-500/25 to-emerald-800/20 border-emerald-400/60",
+        state === "mine" &&
+          !isExploded &&
+          "bg-gradient-to-b from-rose-900/50 to-rose-950/40 border-rose-700/40",
+        state === "mine" &&
+          isExploded &&
+          "bg-gradient-to-b from-rose-500 to-rose-700 border-rose-300 shadow-[0_0_24px_rgba(244,63,94,0.7)]",
+        disabled && state === "hidden" && "opacity-40 cursor-not-allowed",
       )}
     >
-      {state === "safe" && (
-        <motion.div
-          initial={{ scale: 0, rotate: -45 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: "spring", stiffness: 240, damping: 16 }}
-        >
-          <Gem className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-300" fill="currentColor" />
-        </motion.div>
-      )}
-      {state === "mine" && (
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 240, damping: 16 }}
-        >
-          <Bomb
-            className={cn(
-              "w-5 h-5 sm:w-6 sm:h-6",
-              isExploded ? "text-white" : "text-rose-400",
-            )}
-            fill={isExploded ? "currentColor" : "none"}
-          />
-        </motion.div>
-      )}
+      <AnimatePresence mode="wait">
+        {state === "safe" && (
+          <motion.div
+            key="gem"
+            initial={{ scale: 0, opacity: 0, rotate: -30 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 280, damping: 16 }}
+            className="text-xl sm:text-2xl select-none"
+          >
+            💎
+          </motion.div>
+        )}
+        {state === "mine" && !isExploded && (
+          <motion.div
+            key="mine-reveal"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 280, damping: 16 }}
+            className="text-xl sm:text-2xl select-none"
+          >
+            💣
+          </motion.div>
+        )}
+        {state === "mine" && isExploded && (
+          <motion.div
+            key="explosion"
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-2xl sm:text-3xl select-none"
+          >
+            💥
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.button>
   );
 }

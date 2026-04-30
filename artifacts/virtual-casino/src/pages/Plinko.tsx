@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { motion } from "framer-motion";
-import { Coins, Circle } from "lucide-react";
+import { Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useCasinoStore } from "@/lib/store";
@@ -10,31 +10,35 @@ import { cn } from "@/lib/utils";
 type Risk = "low" | "medium" | "high";
 
 const ROWS = 12;
-const PEG_SPACING_X = 30;
-const PEG_SPACING_Y = 28;
-const BOARD_WIDTH = ROWS * PEG_SPACING_X + 60;
-const BOARD_HEIGHT = (ROWS + 1) * PEG_SPACING_Y + 40;
+const PEG_SPACING_X = 32;
+const PEG_SPACING_Y = 30;
+const BOARD_WIDTH = ROWS * PEG_SPACING_X + 64;
+const BOARD_HEIGHT = (ROWS + 1) * PEG_SPACING_Y + 50;
 
 const MULTIPLIERS: Record<Risk, number[]> = {
-  low: [8, 3, 1.4, 1.1, 1, 0.7, 0.5, 0.7, 1, 1.1, 1.4, 3, 8],
+  low:    [8, 3, 1.4, 1.1, 1, 0.7, 0.5, 0.7, 1, 1.1, 1.4, 3, 8],
   medium: [22, 9, 2, 1.4, 1, 0.5, 0.3, 0.5, 1, 1.4, 2, 9, 22],
-  high: [110, 24, 8, 3, 1.5, 0.5, 0.2, 0.5, 1.5, 3, 8, 24, 110],
+  high:   [110, 24, 8, 3, 1.5, 0.5, 0.2, 0.5, 1.5, 3, 8, 24, 110],
 };
 
 const SLOT_COLORS = [
-  "from-rose-500 to-rose-600",
-  "from-orange-500 to-rose-500",
-  "from-amber-500 to-orange-500",
-  "from-amber-400 to-amber-500",
-  "from-yellow-400 to-amber-400",
-  "from-yellow-300 to-yellow-400",
-  "from-yellow-200 to-yellow-300",
-  "from-yellow-300 to-yellow-400",
-  "from-yellow-400 to-amber-400",
-  "from-amber-400 to-amber-500",
-  "from-amber-500 to-orange-500",
-  "from-orange-500 to-rose-500",
-  "from-rose-500 to-rose-600",
+  "#e11d48", "#f97316", "#f59e0b", "#d4af37",
+  "#a3e635", "#84cc16", "#fde68a",
+  "#84cc16", "#a3e635", "#d4af37",
+  "#f59e0b", "#f97316", "#e11d48",
+];
+
+const BALL_COLORS = [
+  "from-amber-200 to-amber-500",
+  "from-emerald-200 to-emerald-500",
+  "from-sky-200 to-sky-500",
+  "from-fuchsia-200 to-fuchsia-500",
+  "from-rose-200 to-rose-500",
+  "from-teal-200 to-teal-500",
+  "from-orange-200 to-orange-500",
+  "from-violet-200 to-violet-500",
+  "from-lime-200 to-lime-500",
+  "from-cyan-200 to-cyan-500",
 ];
 
 const BET_PRESETS = [10, 25, 50, 100];
@@ -42,9 +46,10 @@ const BALL_COUNTS = [1, 3, 5, 10] as const;
 
 interface BallDrop {
   id: number;
-  path: number[]; // 0 = left, 1 = right
+  path: number[];
   slot: number;
   delay: number;
+  colorIdx: number;
 }
 
 interface SettleSummary {
@@ -60,10 +65,11 @@ export default function Plinko() {
   const [ballCount, setBallCount] = useState<number>(1);
   const [risk, setRisk] = useState<Risk>("medium");
   const [drops, setDrops] = useState<BallDrop[]>([]);
-  const [hitSlots, setHitSlots] = useState<Set<number>>(new Set());
+  const [hitSlots, setHitSlots] = useState<Map<number, number>>(new Map());
   const [busy, setBusy] = useState(false);
   const [summary, setSummary] = useState<SettleSummary | null>(null);
   const idRef = useRef(0);
+  const colorIdxRef = useRef(0);
 
   const multipliers = MULTIPLIERS[risk];
   const totalCost = bet * ballCount;
@@ -86,29 +92,29 @@ export default function Plinko() {
     if (busy || balance < totalCost) return;
     setBusy(true);
     setSummary(null);
-    setHitSlots(new Set());
+    setHitSlots(new Map());
 
     const newDrops: BallDrop[] = [];
     const baseId = idRef.current;
-    const stagger = 110; // ms between balls
+    const stagger = 110;
 
     for (let n = 0; n < ballCount; n++) {
       const path: number[] = [];
-      for (let i = 0; i < ROWS; i++) {
-        path.push(Math.random() > 0.5 ? 1 : 0);
-      }
+      for (let i = 0; i < ROWS; i++) path.push(Math.random() > 0.5 ? 1 : 0);
       const slot = path.reduce((s, c) => s + c, 0);
       newDrops.push({
         id: baseId + n + 1,
         path,
         slot,
         delay: n * stagger,
+        colorIdx: (colorIdxRef.current + n) % BALL_COLORS.length,
       });
     }
     idRef.current = baseId + ballCount;
+    colorIdxRef.current = (colorIdxRef.current + ballCount) % BALL_COLORS.length;
     setDrops((prev) => [...prev, ...newDrops]);
 
-    const animDuration = 1900;
+    const animDuration = 2000;
     const lastSettle = animDuration + (ballCount - 1) * stagger;
 
     let totalPayout = 0;
@@ -122,20 +128,15 @@ export default function Plinko() {
         hits.push({ slot: d.slot, mult });
         placeBet("plinko", bet, payout, { multiplier: mult });
         setHitSlots((prev) => {
-          const next = new Set(prev);
-          next.add(d.slot);
+          const next = new Map(prev);
+          next.set(d.slot, (next.get(d.slot) ?? 0) + 1);
           return next;
         });
       }, animDuration + d.delay);
     });
 
     window.setTimeout(() => {
-      setSummary({
-        drops: ballCount,
-        totalBet: bet * ballCount,
-        totalPayout,
-        hits,
-      });
+      setSummary({ drops: ballCount, totalBet: bet * ballCount, totalPayout, hits });
       setBusy(false);
       window.setTimeout(() => {
         setDrops((prev) =>
@@ -182,7 +183,7 @@ export default function Plinko() {
                 busy && "opacity-50 cursor-not-allowed",
               )}
             >
-              {r} Risk
+              {r}
             </button>
           ))}
         </div>
@@ -192,18 +193,22 @@ export default function Plinko() {
       <div className="casino-card p-4 sm:p-6 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
 
-        <div
-          className="relative mx-auto"
-          style={{ width: BOARD_WIDTH, height: BOARD_HEIGHT }}
-        >
+        <div className="relative mx-auto" style={{ width: BOARD_WIDTH, height: BOARD_HEIGHT }}>
           {/* Pegs */}
           <div className="absolute" style={{ left: BOARD_WIDTH / 2, top: 0 }}>
             {pegRows.map((row, r) =>
               row.map((peg, i) => (
                 <div
                   key={`peg-${r}-${i}`}
-                  className="absolute w-2 h-2 rounded-full bg-primary/40 shadow-[0_0_6px_rgba(212,175,55,0.4)]"
-                  style={{ left: peg.x - 4, top: peg.y - 4 }}
+                  className="absolute rounded-full"
+                  style={{
+                    width: 10,
+                    height: 10,
+                    left: peg.x - 5,
+                    top: peg.y - 5,
+                    background: "radial-gradient(circle at 35% 30%, hsl(46 80% 75%), hsl(46 60% 45%))",
+                    boxShadow: "0 0 8px rgba(212,175,55,0.5), 0 1px 3px rgba(0,0,0,0.4)",
+                  }}
                 />
               )),
             )}
@@ -224,58 +229,71 @@ export default function Plinko() {
                 ys.push((i + 1) * PEG_SPACING_Y);
               }
               xs.push(x * PEG_SPACING_X);
-              ys.push(BOARD_HEIGHT - 24);
+              ys.push(BOARD_HEIGHT - 28);
 
+              const ballColor = BALL_COLORS[d.colorIdx];
               return (
                 <motion.div
                   key={d.id}
                   initial={{ x: 0, y: 0, opacity: 0 }}
                   animate={{ x: xs, y: ys, opacity: [0, 1, 1, 1] }}
                   transition={{
-                    duration: 1.9,
+                    duration: 2.0,
                     delay: d.delay / 1000,
-                    times: [
-                      0,
-                      0.05,
-                      ...xs
-                        .slice(2)
-                        .map((_, i) => 0.05 + ((i + 1) / xs.length) * 0.9),
-                    ].slice(0, xs.length),
+                    times: [0, 0.04, ...xs.slice(2).map((_, i) => 0.04 + ((i + 1) / xs.length) * 0.92)].slice(0, xs.length),
                     ease: "easeIn",
                   }}
                   className="absolute"
-                  style={{ left: -7, top: -7 }}
+                  style={{ left: -9, top: -9 }}
                 >
-                  <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-b from-amber-200 to-amber-500 shadow-[0_0_10px_rgba(212,175,55,0.8)]" />
+                  <div
+                    className={cn("w-5 h-5 rounded-full bg-gradient-to-b", ballColor)}
+                    style={{
+                      boxShadow: "0 0 12px rgba(255,255,255,0.5), 0 2px 4px rgba(0,0,0,0.5)",
+                    }}
+                  />
                 </motion.div>
               );
             })}
           </div>
 
-          {/* Slot row at bottom */}
+          {/* Slot row */}
           <div
             className="absolute left-0 right-0 flex justify-center gap-px"
-            style={{ bottom: 0, height: 28 }}
+            style={{ bottom: 0, height: 34 }}
           >
             {multipliers.map((m, i) => {
               const isHit = hitSlots.has(i);
+              const hitCount = hitSlots.get(i) ?? 0;
               return (
                 <motion.div
                   key={i}
                   animate={
                     isHit
-                      ? { scale: [1, 1.18, 1], y: [0, -3, 0] }
+                      ? { scale: [1, 1.22, 1], y: [0, -5, 0] }
                       : { scale: 1, y: 0 }
                   }
                   transition={{ duration: 0.5 }}
                   className={cn(
-                    "flex-1 max-w-[26px] rounded-sm flex items-center justify-center text-[9px] font-bold tabular-nums bg-gradient-to-b text-zinc-900 shadow-md",
-                    SLOT_COLORS[i],
-                    isHit &&
-                      "ring-2 ring-primary ring-offset-1 ring-offset-background",
+                    "flex-1 max-w-[28px] rounded-md flex items-center justify-center text-[8px] sm:text-[9px] font-bold tabular-nums shadow-lg relative overflow-hidden",
+                    isHit && "ring-2 ring-white ring-offset-1 ring-offset-background",
                   )}
+                  style={{
+                    background: isHit
+                      ? `linear-gradient(to bottom, white, ${SLOT_COLORS[i]})`
+                      : `linear-gradient(to bottom, ${SLOT_COLORS[i]}cc, ${SLOT_COLORS[i]})`,
+                    color: "#0a0a0a",
+                    boxShadow: isHit
+                      ? `0 0 16px ${SLOT_COLORS[i]}aa`
+                      : `0 2px 6px rgba(0,0,0,0.4)`,
+                  }}
                 >
-                  {m}×
+                  {m < 10 ? `${m}×` : m >= 100 ? `${m}` : `${m}×`}
+                  {hitCount > 1 && (
+                    <div className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-white text-[7px] font-bold flex items-center justify-center text-zinc-900">
+                      {hitCount}
+                    </div>
+                  )}
                 </motion.div>
               );
             })}
@@ -283,7 +301,7 @@ export default function Plinko() {
         </div>
 
         {/* Result message */}
-        <div className="mt-4 min-h-12 flex items-center justify-center">
+        <div className="mt-5 min-h-12 flex items-center justify-center">
           {summary && (
             <motion.div
               initial={{ opacity: 0, y: 6 }}
@@ -300,11 +318,11 @@ export default function Plinko() {
                       : "text-rose-400",
                 )}
               >
-                {summary.drops} ball{summary.drops > 1 ? "s" : ""} ·{" "}
+                {summary.drops > 1 ? `${summary.drops} balls · ` : ""}
                 {summary.totalPayout > summary.totalBet
-                  ? `+${summary.totalPayout - summary.totalBet}`
+                  ? `🎉 +${summary.totalPayout - summary.totalBet}`
                   : summary.totalPayout === summary.totalBet
-                    ? "even"
+                    ? "Even"
                     : `${summary.totalPayout - summary.totalBet}`}
               </div>
               {summary.drops > 1 && (
@@ -322,9 +340,7 @@ export default function Plinko() {
       <div className="casino-card p-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="text-sm text-muted-foreground">Bet per ball</div>
-          <div className="font-mono text-2xl text-primary tabular-nums">
-            {bet}
-          </div>
+          <div className="font-mono text-2xl text-primary tabular-nums">{bet}</div>
         </div>
         <Slider
           value={[bet]}
@@ -349,13 +365,11 @@ export default function Plinko() {
           ))}
         </div>
 
-        {/* Ball count selector */}
+        {/* Ball count */}
         <div className="pt-2 border-t border-primary/10 space-y-2">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">Balls per drop</div>
-            <div className="font-mono text-lg text-primary tabular-nums">
-              ×{ballCount}
-            </div>
+            <div className="font-mono text-lg text-primary tabular-nums">×{ballCount}</div>
           </div>
           <div className="flex gap-2">
             {BALL_COUNTS.map((n) => {
@@ -368,7 +382,7 @@ export default function Plinko() {
                   disabled={busy || !can}
                   onClick={() => setBallCount(n)}
                   className={cn(
-                    "flex-1 rounded-lg border py-2 text-sm font-semibold transition-all",
+                    "flex-1 rounded-xl border-2 py-2.5 text-sm font-semibold transition-all",
                     ballCount === n
                       ? "border-primary bg-primary/15 text-primary shadow-[0_0_12px_rgba(212,175,55,0.25)]"
                       : "border-primary/20 text-muted-foreground hover:border-primary/50 hover:text-foreground",
@@ -388,19 +402,14 @@ export default function Plinko() {
           onClick={drop}
           className="w-full h-14 text-lg font-serif bg-gradient-to-b from-primary to-primary/80 text-primary-foreground"
         >
-          <Circle className="w-5 h-5 mr-2" fill="currentColor" />
+          <Coins className="w-5 h-5 mr-2" />
           {balance < totalCost
             ? "Insufficient Chips"
             : busy
               ? "Falling..."
               : ballCount > 1
-                ? `Drop ${ballCount}`
-                : "Drop"}
-          {!busy && balance >= totalCost && (
-            <span className="ml-2 opacity-75">
-              <Coins className="w-4 h-4 inline -mt-0.5" /> {totalCost}
-            </span>
-          )}
+                ? `🎱 Drop ${ballCount} · ${totalCost}`
+                : `🎱 Drop · ${bet}`}
         </Button>
       </div>
     </div>

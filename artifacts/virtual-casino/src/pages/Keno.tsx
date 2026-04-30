@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { Hash, Coins, RotateCcw, Shuffle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Coins, RotateCcw, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { useCasinoStore } from "@/lib/store";
@@ -34,6 +34,7 @@ export default function Keno() {
     bet: number;
   } | null>(null);
   const drawTimerRef = useRef<number | null>(null);
+  const [latestBall, setLatestBall] = useState<number | null>(null);
 
   useEffect(() => {
     return () => {
@@ -73,7 +74,6 @@ export default function Keno() {
     if (picks.size !== PICKS_REQUIRED) return;
     if (balance < bet) return;
 
-    // Pick 8 distinct numbers
     const pool = Array.from({ length: TOTAL_NUMBERS }, (_, i) => i + 1);
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -82,26 +82,28 @@ export default function Keno() {
     const drawnNums = pool.slice(0, NUMBERS_DRAWN);
     setDrawn(drawnNums);
     setRevealedCount(0);
+    setLatestBall(null);
     setPhase("drawing");
 
     let i = 0;
     drawTimerRef.current = window.setInterval(() => {
       i += 1;
       setRevealedCount(i);
+      setLatestBall(drawnNums[i - 1]);
       if (i >= NUMBERS_DRAWN) {
         if (drawTimerRef.current !== null) {
           clearInterval(drawTimerRef.current);
           drawTimerRef.current = null;
         }
-        // Settle
         const hits = drawnNums.filter((n) => picks.has(n)).length;
         const mult = PAYOUTS[hits] ?? 0;
         const payout = Math.floor(bet * mult);
         placeBet("keno", bet, payout, { multiplier: mult, hits });
         setResult({ hits, payout, bet });
         setPhase("done");
+        setLatestBall(null);
       }
-    }, 220);
+    }, 280);
   };
 
   const reset = () => {
@@ -109,6 +111,7 @@ export default function Keno() {
     setDrawn([]);
     setRevealedCount(0);
     setResult(null);
+    setLatestBall(null);
   };
 
   const newGame = () => {
@@ -130,14 +133,19 @@ export default function Keno() {
       {/* Paytable */}
       <div className="casino-card p-4">
         <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 text-center">
-          Paytable · 4 Picks of 40 · 8 Drawn
+          Paytable · 4 Picks · 8 Drawn from 40
         </div>
         <div className="grid grid-cols-4 gap-2 text-center">
           {[4, 3, 2, 1].map((h) => (
-            <div
+            <motion.div
               key={h}
+              animate={
+                result?.hits === h
+                  ? { scale: [1, 1.1, 1], boxShadow: ["0 0 0px transparent", "0 0 20px rgba(212,175,55,0.5)", "0 0 8px rgba(212,175,55,0.3)"] }
+                  : { scale: 1 }
+              }
               className={cn(
-                "rounded-lg border py-2 px-1",
+                "rounded-xl border py-3 px-1",
                 result?.hits === h
                   ? "border-primary bg-primary/15 ring-2 ring-primary/40"
                   : "border-primary/20 bg-card/40",
@@ -146,12 +154,43 @@ export default function Keno() {
               <div className="text-[10px] text-muted-foreground uppercase">
                 {h} hit{h === 1 ? "" : "s"}
               </div>
-              <div className="font-mono text-lg text-primary tabular-nums">
+              <div className="font-mono text-xl text-primary tabular-nums font-bold">
                 {PAYOUTS[h]}×
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
+      </div>
+
+      {/* Live ball display */}
+      <div className="flex justify-center h-12 items-center gap-3">
+        {phase === "drawing" && (
+          <>
+            <div className="text-sm text-muted-foreground italic">Drawing:</div>
+            <AnimatePresence mode="popLayout">
+              {latestBall !== null && (
+                <motion.div
+                  key={latestBall}
+                  initial={{ scale: 0, rotate: -20, opacity: 0 }}
+                  animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                  exit={{ scale: 0.5, opacity: 0 }}
+                  transition={{ type: "spring", stiffness: 280, damping: 18 }}
+                  className={cn(
+                    "w-11 h-11 rounded-full flex items-center justify-center text-base font-bold tabular-nums border-2 shadow-lg",
+                    picks.has(latestBall)
+                      ? "bg-gradient-to-b from-amber-300 to-amber-500 border-amber-200 text-zinc-900 shadow-amber-400/50"
+                      : "bg-gradient-to-b from-slate-400 to-slate-600 border-slate-300 text-white",
+                  )}
+                >
+                  {latestBall}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div className="text-sm text-muted-foreground font-mono">
+              {revealedCount}/{NUMBERS_DRAWN}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Number grid */}
@@ -169,22 +208,22 @@ export default function Keno() {
                 type="button"
                 onClick={() => togglePick(n)}
                 disabled={phase !== "picking"}
-                whileHover={phase === "picking" ? { scale: 1.06 } : undefined}
-                whileTap={phase === "picking" ? { scale: 0.95 } : undefined}
-                animate={isDrawn ? { scale: [1, 1.2, 1] } : { scale: 1 }}
+                whileHover={phase === "picking" ? { scale: 1.1, y: -2 } : undefined}
+                whileTap={phase === "picking" ? { scale: 0.9 } : undefined}
+                animate={isDrawn ? { scale: [1, 1.25, 1] } : { scale: 1 }}
                 transition={{ duration: 0.4 }}
                 className={cn(
-                  "aspect-square rounded-md border flex items-center justify-center font-mono font-bold tabular-nums text-sm transition-colors",
+                  "aspect-square rounded-lg border-2 flex items-center justify-center font-mono font-bold tabular-nums text-sm transition-colors",
                   !isPicked && !isDrawn &&
-                    "border-primary/15 bg-card/60 text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                    "border-primary/15 bg-card/60 text-muted-foreground hover:border-primary/50 hover:text-foreground hover:bg-primary/5",
                   isPicked && !isDrawn && phase !== "done" &&
-                    "border-primary/60 bg-primary/15 text-primary",
+                    "border-primary/70 bg-primary/20 text-primary shadow-[0_0_12px_rgba(212,175,55,0.25)]",
                   isMissPicked &&
-                    "border-zinc-500/40 bg-zinc-500/15 text-zinc-300 line-through",
+                    "border-zinc-600/40 bg-zinc-700/20 text-zinc-500 line-through",
                   isHit &&
-                    "border-amber-400 bg-gradient-to-b from-amber-300 to-amber-500 text-zinc-900 shadow-md shadow-amber-500/40",
+                    "border-amber-300 bg-gradient-to-b from-amber-300 to-amber-500 text-zinc-900 shadow-lg shadow-amber-500/40",
                   !isPicked && isDrawn &&
-                    "border-rose-500/40 bg-rose-500/15 text-rose-300",
+                    "border-slate-600/40 bg-slate-700/20 text-slate-400",
                 )}
               >
                 {n}
@@ -194,33 +233,33 @@ export default function Keno() {
         </div>
 
         {/* Result line */}
-        <div className="mt-4 h-10 flex items-center justify-center">
-          {result && phase === "done" && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={cn(
-                "font-serif text-2xl",
-                result.payout > result.bet
-                  ? "text-emerald-400"
-                  : result.payout > 0
-                    ? "text-amber-200"
-                    : "text-rose-400",
-              )}
-            >
-              {result.hits} hit{result.hits === 1 ? "" : "s"} ·{" "}
-              {result.payout > result.bet
-                ? `+${result.payout - result.bet}`
-                : result.payout === 0
-                  ? `-${result.bet}`
-                  : `${result.payout - result.bet}`}
-            </motion.div>
-          )}
-          {phase === "drawing" && (
-            <div className="text-muted-foreground italic">
-              Drawing {revealedCount} / {NUMBERS_DRAWN}...
-            </div>
-          )}
+        <div className="mt-5 h-12 flex items-center justify-center">
+          <AnimatePresence mode="wait">
+            {result && phase === "done" && (
+              <motion.div
+                key="result"
+                initial={{ opacity: 0, y: 8, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ type: "spring", stiffness: 200 }}
+                className={cn(
+                  "font-serif text-2xl",
+                  result.payout > result.bet
+                    ? "text-emerald-400"
+                    : result.payout > 0
+                      ? "text-amber-200"
+                      : "text-rose-400",
+                )}
+              >
+                {result.hits} hit{result.hits === 1 ? "" : "s"} ·{" "}
+                {result.payout > result.bet
+                  ? `🎉 +${result.payout - result.bet}`
+                  : result.payout === 0
+                    ? `❌ −${result.bet}`
+                    : `${result.payout - result.bet}`}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -229,7 +268,10 @@ export default function Keno() {
         <div className="casino-card p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              Picks: {picks.size} / {PICKS_REQUIRED}
+              Picks:{" "}
+              <span className={cn("font-mono font-bold", picks.size === PICKS_REQUIRED ? "text-emerald-400" : "text-primary")}>
+                {picks.size} / {PICKS_REQUIRED}
+              </span>
             </div>
             <div className="flex gap-2">
               <Button
@@ -255,9 +297,7 @@ export default function Keno() {
 
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">Bet</div>
-            <div className="font-mono text-2xl text-primary tabular-nums">
-              {bet}
-            </div>
+            <div className="font-mono text-2xl text-primary tabular-nums">{bet}</div>
           </div>
           <Slider
             value={[bet]}
@@ -287,12 +327,12 @@ export default function Keno() {
             onClick={draw}
             className="w-full h-14 text-lg font-serif bg-gradient-to-b from-primary to-primary/80 text-primary-foreground"
           >
-            <Hash className="w-5 h-5 mr-2" />
+            <Coins className="w-5 h-5 mr-2" />
             {balance < bet
               ? "Insufficient Chips"
               : picks.size !== PICKS_REQUIRED
                 ? `Pick ${PICKS_REQUIRED - picks.size} more`
-                : "Draw"}
+                : "🎱 Draw"}
           </Button>
         </div>
       ) : phase === "done" ? (
