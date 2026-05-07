@@ -17,6 +17,7 @@ import {
   Skull,
 } from "lucide-react";
 import { useCasinoStore, GameType } from "@/lib/store";
+import { COLLECTIBLES, getCollectible, RARITY_LABEL, RARITY_COLOR } from "@/lib/collectibles";
 import {
   getLevelFor,
   getNextLevel,
@@ -449,7 +450,7 @@ function AchievementsWidget() {
 }
 
 export default function Lobby() {
-  const { stats, balance, ownerMode } = useCasinoStore();
+  const { stats, balance, ownerMode, gameWins, collectibles } = useCasinoStore();
 
   const visibleGames = GAME_CARDS.filter((g) => !g.ownerOnly || ownerMode);
 
@@ -615,11 +616,11 @@ export default function Lobby() {
                     <span className="font-serif text-xl">The Bar</span>
                   </div>
                   <div className="text-sm text-primary/80 italic mb-2">
-                    Pull up a stool. Drinks are on the house.
+                    Pull up a stool. Drinks aren't free.
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Vincent pours you a free drink every minute. Pick your
-                    poison and pocket the chip tip.
+                    Spend chips on a drink from Vincent's house menu. Sometimes
+                    something ends up in your pocket.
                   </div>
                 </div>
               </div>
@@ -648,11 +649,11 @@ export default function Lobby() {
                     </span>
                   </div>
                   <div className="text-sm text-primary/80 italic mb-2">
-                    Three clues. Two guesses. One drink.
+                    Find all the ingredients. Get the amounts right.
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Vincent pours a mystery cocktail. Study the clues and name
-                    the drink to earn chips and maybe a rare collectible.
+                    95 cocktails, 30 ingredients. Test each one — three strikes
+                    and you're done. Serve it perfectly for 600 chips.
                   </div>
                 </div>
               </div>
@@ -718,6 +719,77 @@ export default function Lobby() {
           </Link>
         </div>
       </section>
+
+      {/* Wall of Fame */}
+      {stats.handsPlayed > 0 && (() => {
+        const favGameEntry = Object.entries(gameWins).sort((a, b) => b[1] - a[1])[0];
+        const favGame = favGameEntry ? favGameEntry[0] as GameType : null;
+        const rarestCollectible = (() => {
+          const order: Record<string, number> = { legendary: 4, rare: 3, uncommon: 2, common: 1 };
+          let best: { id: string; rarity: string } | null = null;
+          for (const [id, qty] of Object.entries(collectibles)) {
+            if (qty > 0) {
+              const c = getCollectible(id);
+              if (c && (!best || (order[c.rarity] ?? 0) > (order[best.rarity] ?? 0))) {
+                best = { id, rarity: c.rarity };
+              }
+            }
+          }
+          return best ? getCollectible(best.id) : null;
+        })();
+
+        return (
+          <section>
+            <div className="flex items-end justify-between mb-5">
+              <h2 className="font-serif text-2xl">Wall of Fame</h2>
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Your all-time bests</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="casino-card px-4 py-4 flex flex-col gap-1">
+                <div className="text-2xl font-serif font-bold tabular-nums text-primary">
+                  {stats.biggestWin > 0 ? `+${stats.biggestWin.toLocaleString()}` : "—"}
+                </div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Biggest win</div>
+              </div>
+              <div className="casino-card px-4 py-4 flex flex-col gap-1">
+                <div className="text-2xl font-serif font-bold tabular-nums text-primary">
+                  {stats.longestStreak || 0}
+                </div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Longest streak</div>
+              </div>
+              <div className="casino-card px-4 py-4 flex flex-col gap-1">
+                <div className="text-2xl font-serif font-bold tabular-nums text-primary">
+                  {stats.handsPlayed.toLocaleString()}
+                </div>
+                <div className="text-xs text-muted-foreground uppercase tracking-wider">Hands played</div>
+              </div>
+              {favGame && (
+                <div className="casino-card px-4 py-4 flex flex-col gap-1">
+                  <div className="text-lg font-serif font-bold leading-tight text-primary capitalize">
+                    {GAME_LABELS[favGame] ?? favGame}
+                  </div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider">Favourite game</div>
+                </div>
+              )}
+              {rarestCollectible && (
+                <div className="casino-card px-4 py-4 flex flex-col gap-1 col-span-1 sm:col-span-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{rarestCollectible.emoji}</span>
+                    <div>
+                      <div className={cn("text-sm font-semibold", RARITY_COLOR[rarestCollectible.rarity])}>
+                        {rarestCollectible.name}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {RARITY_LABEL[rarestCollectible.rarity]} · rarest in collection
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Achievements */}
       <AchievementsWidget />

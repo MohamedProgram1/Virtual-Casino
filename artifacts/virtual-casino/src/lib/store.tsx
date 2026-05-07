@@ -66,6 +66,7 @@ export interface CasinoStats {
   totalWagered: number;
   biggestWin: number;
   handsPlayed: number;
+  longestStreak: number;
 }
 
 export interface CasinoSettings {
@@ -157,6 +158,8 @@ interface CasinoContextType extends CasinoState {
   addCollectible: (id: string, name: string) => void;
   /** Buy a collectible from the store for chips. */
   purchaseCollectible: (id: string, name: string, price: number) => boolean;
+  /** Spend chips at The Bar to order a drink (no chip reward). */
+  purchaseDrink: (cost: number, name: string) => boolean;
 }
 
 const STARTING_BALANCE = 1000;
@@ -169,6 +172,7 @@ const DEFAULT_STATE: CasinoState = {
     totalWagered: 0,
     biggestWin: 0,
     handsPlayed: 0,
+    longestStreak: 0,
   },
   settings: {
     soundEnabled: true,
@@ -316,10 +320,12 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
 
       const history = [event, ...prev.history].slice(0, 50);
 
+      const globalStreak = win ? (prev.stats.longestStreak || 0) : (prev.stats.longestStreak || 0);
       const stats = {
         totalWagered: prev.stats.totalWagered + amount,
         biggestWin: Math.max(prev.stats.biggestWin, effectivePayout),
         handsPlayed: prev.stats.handsPlayed + 1,
+        longestStreak: win ? Math.max(globalStreak, newStreak) : globalStreak,
       };
 
       // Daily challenges (use the boosted payout so wins still count)
@@ -592,6 +598,30 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         },
       };
     });
+  };
+
+  const purchaseDrink = (cost: number, name: string): boolean => {
+    let success = false;
+    setState((prev) => {
+      if (prev.balance < cost) {
+        setTimeout(() => toast.error("Not enough chips for that."), 0);
+        return prev;
+      }
+      success = true;
+      setTimeout(
+        () =>
+          toast.success(`Vincent pours the ${name}`, {
+            description: `−${cost} chips`,
+          }),
+        0,
+      );
+      return {
+        ...prev,
+        balance: prev.balance - cost,
+        bar: { ...prev.bar, served: prev.bar.served + 1 },
+      };
+    });
+    return success;
   };
 
   const addCollectible = (id: string, name: string) => {
@@ -874,6 +904,7 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         pawnCollectible,
         addCollectible,
         purchaseCollectible,
+        purchaseDrink,
       }}
     >
       {children}
