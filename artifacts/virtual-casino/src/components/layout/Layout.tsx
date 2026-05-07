@@ -27,7 +27,8 @@ const STATIC_TITLES: Record<string, string> = {
   "/history": "History",
   "/settings": "Settings",
   "/store": "The Vault Store",
-  "/bar": "The Back Room Bar",
+  "/bar": "Mystery Drink",
+  "/lounge": "The Bar",
   "/loan-shark": "Loan Shark & Pawn",
 };
 

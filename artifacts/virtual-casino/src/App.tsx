@@ -26,6 +26,7 @@ import OwnerSafe from "@/pages/OwnerSafe";
 import LoanShark from "@/pages/LoanShark";
 import Store from "@/pages/Store";
 import Bar from "@/pages/Bar";
+import Lounge from "@/pages/Lounge";
 import History from "@/pages/History";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
@@ -57,6 +58,7 @@ function Router() {
         <Route path="/loan-shark" component={LoanShark} />
         <Route path="/store" component={Store} />
         <Route path="/bar" component={Bar} />
+        <Route path="/lounge" component={Lounge} />
         <Route path="/history" component={History} />
         <Route path="/settings" component={Settings} />
         <Route component={NotFound} />

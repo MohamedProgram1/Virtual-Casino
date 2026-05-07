@@ -597,7 +597,7 @@ export default function Lobby() {
           </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Link href="/bar">
+          <Link href="/lounge">
             <motion.div
               whileHover={{ y: -3 }}
               className="group relative casino-card p-6 cursor-pointer hover:border-primary/40 transition-all overflow-hidden"
@@ -613,17 +613,46 @@ export default function Lobby() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                     <span className="font-serif text-xl">The Bar</span>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-b from-rose-400/30 to-rose-700/20 border border-rose-400/50 text-[10px] font-bold uppercase tracking-wider text-rose-200">
+                  </div>
+                  <div className="text-sm text-primary/80 italic mb-2">
+                    Pull up a stool. Drinks are on the house.
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Vincent pours you a free drink every minute. Pick your
+                    poison and pocket the chip tip.
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </Link>
+
+          <Link href="/bar">
+            <motion.div
+              whileHover={{ y: -3 }}
+              className="group relative casino-card p-6 cursor-pointer hover:border-primary/40 transition-all overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-700/20 via-indigo-700/10 to-zinc-900/10 opacity-80 pointer-events-none" />
+              <div className="absolute -bottom-6 -right-4 opacity-20 group-hover:opacity-35 transition-opacity">
+                <Sparkles className="w-32 h-32 text-violet-300" />
+              </div>
+              <div className="relative flex items-start gap-4">
+                <div className="w-14 h-14 rounded-xl bg-background/60 border border-violet-400/40 flex items-center justify-center shrink-0 group-hover:border-violet-300 transition-colors">
+                  <span className="text-2xl">🍸</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <span className="font-serif text-xl">Mystery Drink</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-b from-violet-400/30 to-violet-700/20 border border-violet-400/50 text-[10px] font-bold uppercase tracking-wider text-violet-200">
                       <Sparkles className="w-2.5 h-2.5" />
                       Minigame
                     </span>
                   </div>
                   <div className="text-sm text-primary/80 italic mb-2">
-                    Mix the drink. Earn the boost.
+                    Three clues. Two guesses. One drink.
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Pour, stack, and serve cocktails. Nail the recipe and walk
-                    away with a multiplier for your next bet.
+                    Vincent pours a mystery cocktail. Study the clues and name
+                    the drink to earn chips and maybe a rare collectible.
                   </div>
                 </div>
               </div>
