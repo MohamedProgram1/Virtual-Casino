@@ -1,5 +1,3 @@
-import { getShopItem } from "./shopItems";
-
 export interface Ingredient {
   id: string;
   name: string;
@@ -96,12 +94,7 @@ export function tipFor(accuracy: number): number {
   return 0;
 }
 
-/** Drinks are only added to your tab when you nail it (>= 80). */
-export function shouldGrantDrink(accuracy: number): boolean {
-  return accuracy >= 80;
-}
-
-/** Look up the matching shop drink so we can grant its boost on a perfect mix. */
-export function shopItemForRecipe(recipeId: string) {
-  return getShopItem(recipeId);
+/** Collectible (or chip tip) is only awarded at this accuracy threshold. */
+export function shouldGrantReward(accuracy: number): boolean {
+  return accuracy >= 60;
 }

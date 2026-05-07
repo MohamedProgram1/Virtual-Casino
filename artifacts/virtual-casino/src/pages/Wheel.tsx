@@ -140,7 +140,7 @@ export default function Wheel() {
       </div>
 
       {/* Wheel */}
-      <div className="casino-card p-4 sm:p-8 relative overflow-hidden" style={{ perspective: "1300px" }}>
+      <div className="casino-card p-4 sm:p-8 relative overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
 
         <div
@@ -148,10 +148,8 @@ export default function Wheel() {
           style={{
             width: SVG_SIZE,
             height: SVG_SIZE + 40,
-            transform: "rotateX(24deg)",
-            transformStyle: "preserve-3d",
             filter:
-              "drop-shadow(0 30px 30px rgba(0,0,0,0.55)) drop-shadow(0 6px 10px rgba(0,0,0,0.45))",
+              "drop-shadow(0 0 35px rgba(212,175,55,0.15)) drop-shadow(0 18px 35px rgba(0,0,0,0.6))",
           }}
         >
           {/* Outer decorative ring */}

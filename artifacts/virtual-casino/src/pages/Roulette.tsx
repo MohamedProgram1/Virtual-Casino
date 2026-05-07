@@ -313,29 +313,23 @@ export default function Roulette() {
         </div>
       </div>
 
-      {/* Wheel + ball — tilted forward for a 3D feel */}
-      <div className="flex flex-col items-center" style={{ perspective: "1100px" }}>
+      {/* Wheel + ball */}
+      <div className="flex flex-col items-center">
         <div
           className="relative w-64 h-64 sm:w-72 sm:h-72"
           style={{
-            transform: "rotateX(28deg)",
-            transformStyle: "preserve-3d",
             filter:
-              "drop-shadow(0 30px 30px rgba(0,0,0,0.55)) drop-shadow(0 8px 12px rgba(0,0,0,0.4))",
+              "drop-shadow(0 0 40px rgba(212,175,55,0.18)) drop-shadow(0 20px 40px rgba(0,0,0,0.65))",
           }}
         >
-          {/* Outer rim — extruded ring */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-b from-amber-500 via-amber-700 to-amber-950 shadow-2xl" />
+          {/* Outer rim */}
+          <div className="absolute inset-0 rounded-full bg-gradient-to-b from-amber-700 to-amber-950 shadow-2xl" />
           <div
             className="absolute inset-0 rounded-full pointer-events-none"
             style={{
               background:
-                "radial-gradient(ellipse at 30% 20%, rgba(255,235,180,0.55) 0%, rgba(255,235,180,0) 35%)",
+                "radial-gradient(ellipse at 30% 20%, rgba(255,235,180,0.35) 0%, rgba(255,235,180,0) 38%)",
             }}
-          />
-          {/* Faux side wall to read as a depth ring */}
-          <div
-            className="absolute -bottom-1 left-2 right-2 h-3 rounded-full bg-amber-950/80 blur-[1px]"
           />
           {/* Wheel */}
           <motion.div

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useCasinoStore } from "@/lib/store";
 import { LOAN_TIERS, owedFor, loanAgeHours, pawnValueFor } from "@/lib/loans";
 import { SHOP_ITEMS } from "@/lib/shopItems";
+import { COLLECTIBLES, getCollectible, RARITY_COLOR, RARITY_LABEL } from "@/lib/collectibles";
 import { playSound } from "@/lib/sounds";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +32,7 @@ function timeAgo(hours: number): string {
 }
 
 export default function LoanShark() {
-  const { loan, balance, takeLoan, repayLoan, pawnItem, inventory } =
+  const { loan, balance, takeLoan, repayLoan, pawnItem, pawnCollectible, inventory, collectibles } =
     useCasinoStore();
   const [tick, setTick] = useState(0);
   const [payAmount, setPayAmount] = useState<number>(100);
@@ -45,12 +46,19 @@ export default function LoanShark() {
   const owed = loan ? owedFor(loan) : 0;
   const ageHours = loan ? loanAgeHours(loan) : 0;
 
-  // Items the player currently owns and could pawn back.
+  // Shop items the player could pawn back.
   const pawnable = useMemo(() => {
     return SHOP_ITEMS.filter((item) => (inventory[item.id] ?? 0) > 0).map(
       (item) => ({ item, qty: inventory[item.id] ?? 0 }),
     );
   }, [inventory]);
+
+  // Collectibles the player can pawn.
+  const pawnableCollectibles = useMemo(() => {
+    return COLLECTIBLES.filter((c) => (collectibles[c.id] ?? 0) > 0).map(
+      (c) => ({ collectible: c, qty: collectibles[c.id] ?? 0 }),
+    );
+  }, [collectibles]);
 
   // Suppress "unused" warning on tick.
   void tick;
@@ -217,45 +225,38 @@ export default function LoanShark() {
       )}
 
       {/* Pawn shop */}
-      <div className="casino-card p-5 sm:p-6">
-        <div className="flex items-center gap-2 mb-1">
-          <Tag className="w-4 h-4 text-primary" />
-          <h2 className="font-serif text-lg">Pawn Shop</h2>
-        </div>
-        <p className="text-xs text-muted-foreground mb-4">
-          Need quick chips? Hock anything off your tab. The shop pays 60% of
-          retail. No refunds.
-        </p>
-        {pawnable.length === 0 ? (
-          <div className="text-sm text-muted-foreground italic py-6 text-center">
-            Nothing to pawn. Pick up something from the{" "}
-            <Link href="/store">
-              <span className="text-primary hover:underline">Vault Store</span>
-            </Link>{" "}
-            first.
+      <div className="casino-card p-5 sm:p-6 space-y-5">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Tag className="w-4 h-4 text-primary" />
+            <h2 className="font-serif text-lg">Pawn Shop</h2>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {pawnable.map(({ item, qty }) => {
-              const Icon = item.icon;
-              const value = pawnValueFor(item.price);
-              return (
+          <p className="text-xs text-muted-foreground">
+            Hock items for quick chips. Collectibles pay their listed value; store items pay 60% of retail.
+          </p>
+        </div>
+
+        {/* Collectibles */}
+        {pawnableCollectibles.length > 0 && (
+          <div>
+            <div className="text-xs uppercase tracking-wider text-amber-300/80 mb-2">
+              Your Collectibles
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {pawnableCollectibles.map(({ collectible: c, qty }) => (
                 <div
-                  key={item.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-primary/15 bg-background/40"
+                  key={c.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-amber-400/20 bg-amber-500/5"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-background/60 border border-primary/30 flex items-center justify-center shrink-0">
-                    <Icon className={cn("w-5 h-5", item.color)} />
+                  <div className="w-10 h-10 rounded-lg bg-background/60 border border-amber-400/20 flex items-center justify-center shrink-0 text-xl">
+                    {c.emoji}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold truncate">
-                      {item.name}{" "}
-                      <span className="text-xs text-muted-foreground">
-                        ×{qty}
-                      </span>
+                      {c.name} <span className="text-xs text-muted-foreground">×{qty}</span>
                     </div>
-                    <div className="text-[11px] text-muted-foreground">
-                      Retail {item.price} · Pawn {value}
+                    <div className={cn("text-[11px]", RARITY_COLOR[c.rarity])}>
+                      {RARITY_LABEL[c.rarity]} · Pawn {c.pawnValue} chips
                     </div>
                   </div>
                   <Button
@@ -264,15 +265,70 @@ export default function LoanShark() {
                     className="border-amber-400/40 text-amber-200 hover:bg-amber-400/10 shrink-0"
                     onClick={() => {
                       playSound("chip");
-                      pawnItem(item.id, value, item.name);
+                      pawnCollectible(c.id, c.pawnValue, c.name);
                     }}
                   >
                     <Coins className="w-3.5 h-3.5 mr-1" />
                     Pawn
                   </Button>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Shop items */}
+        {pawnable.length > 0 && (
+          <div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+              Store Items (60% retail)
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {pawnable.map(({ item, qty }) => {
+                const Icon = item.icon;
+                const value = pawnValueFor(item.price);
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-primary/15 bg-background/40"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-background/60 border border-primary/30 flex items-center justify-center shrink-0">
+                      <Icon className={cn("w-5 h-5", item.color)} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold truncate">
+                        {item.name} <span className="text-xs text-muted-foreground">×{qty}</span>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        Retail {item.price} · Pawn {value}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-amber-400/40 text-amber-200 hover:bg-amber-400/10 shrink-0"
+                      onClick={() => {
+                        playSound("chip");
+                        pawnItem(item.id, value, item.name);
+                      }}
+                    >
+                      <Coins className="w-3.5 h-3.5 mr-1" />
+                      Pawn
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {pawnable.length === 0 && pawnableCollectibles.length === 0 && (
+          <div className="text-sm text-muted-foreground italic py-6 text-center">
+            Nothing to pawn yet. Win big in games to earn collectibles, or visit the{" "}
+            <Link href="/store">
+              <span className="text-primary hover:underline">Vault Store</span>
+            </Link>
+            .
           </div>
         )}
       </div>

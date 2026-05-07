@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useCasinoStore } from "@/lib/store";
 import { getLevelFor, getNextLevel } from "@/lib/levels";
 import { getAchievement } from "@/lib/achievements";
+import { owedFor } from "@/lib/loans";
 import { GAME_LABELS } from "@/lib/games";
 import { usePlayAgainSlot } from "@/lib/playAgain";
 import { cn } from "@/lib/utils";
@@ -186,6 +187,31 @@ function BoostBadge() {
   );
 }
 
+function DebtBadge() {
+  const { loan } = useCasinoStore();
+  if (!loan) return null;
+  const owed = owedFor(loan);
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <motion.div
+          animate={{ scale: [1, 1.04, 1] }}
+          transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
+          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-red-500/50 bg-gradient-to-b from-red-500/20 to-red-900/10 cursor-default"
+        >
+          <span className="text-[10px] font-bold text-red-300 uppercase tracking-wider">Owed</span>
+          <span className="font-mono font-semibold text-red-200 text-xs tabular-nums">
+            {owed.toLocaleString()}
+          </span>
+        </motion.div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="text-xs text-red-300">Loan outstanding — visit the Pawn Shop to repay.</span>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function OwnerBadge() {
   const { ownerMode } = useCasinoStore();
   if (!ownerMode) return null;
@@ -266,6 +292,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <TitleBadge />
             <LevelBadge />
             <BoostBadge />
+            <DebtBadge />
             <OwnerBadge />
             <ChipBalance />
             <div className="hidden sm:flex items-center gap-1">

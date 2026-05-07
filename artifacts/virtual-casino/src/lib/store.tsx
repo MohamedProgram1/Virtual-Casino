@@ -23,6 +23,7 @@ import {
 import { playSound, setSoundMuted } from "./sounds";
 import type { Loan } from "./loans";
 import { owedFor } from "./loans";
+import { rollDrop } from "./collectibles";
 
 export type GameType =
   | "slots"
@@ -107,6 +108,8 @@ export interface CasinoState {
   bar: BarStats;
   /** Outstanding loan from the loan shark, or null if clean. */
   loan: Loan | null;
+  /** Collectible items earned from gameplay or the bar. id → quantity. */
+  collectibles: Record<string, number>;
 }
 
 interface CasinoContextType extends CasinoState {
@@ -146,8 +149,14 @@ interface CasinoContextType extends CasinoState {
   takeLoan: (principal: number, dailyRate: number) => boolean;
   /** Pay down the outstanding loan balance. Pass `Infinity` to clear it. */
   repayLoan: (amount: number) => boolean;
-  /** Sell an inventory item back to the pawn shop for chips. */
+  /** Sell a shop/boost item back to the pawn shop for chips. */
   pawnItem: (itemId: string, value: number, name: string) => boolean;
+  /** Sell a collectible item to the pawn shop for chips. */
+  pawnCollectible: (id: string, value: number, name: string) => boolean;
+  /** Add a collectible to the player's collection (from gameplay/bar drops). */
+  addCollectible: (id: string, name: string) => void;
+  /** Buy a collectible from the store for chips. */
+  purchaseCollectible: (id: string, name: string, price: number) => boolean;
 }
 
 const STARTING_BALANCE = 1000;
@@ -176,6 +185,7 @@ const DEFAULT_STATE: CasinoState = {
   activeBoost: null,
   bar: { served: 0, tipsEarned: 0 },
   loan: null,
+  collectibles: {},
 };
 
 const STORAGE_KEY = "lucky_vault_casino_state";
@@ -200,6 +210,7 @@ function migrate(stored: Partial<CasinoState>): CasinoState {
     activeBoost: stored.activeBoost ?? null,
     bar: { ...DEFAULT_STATE.bar, ...(stored.bar ?? {}) },
     loan: stored.loan ?? null,
+    collectibles: stored.collectibles ?? {},
   };
 }
 
@@ -377,6 +388,19 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         else if (effectivePayout === 0) playSound("lose");
       }
 
+      // Collectible drop on big wins
+      let droppedCollectibleId: string | null = null;
+      let nextCollectibles = prev.collectibles;
+      if (win && meta?.multiplier != null && meta.multiplier >= 5) {
+        droppedCollectibleId = rollDrop(meta.multiplier);
+        if (droppedCollectibleId) {
+          nextCollectibles = {
+            ...prev.collectibles,
+            [droppedCollectibleId]: (prev.collectibles[droppedCollectibleId] ?? 0) + 1,
+          };
+        }
+      }
+
       // Side-effect toasts (deferred). Use the boosted payout for the headline,
       // but call out the bonus separately so the player sees what the drink did.
       if (effectivePayout > 0) {
@@ -403,6 +427,15 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
             0,
           );
         }
+      }
+      if (droppedCollectibleId) {
+        const dId = droppedCollectibleId;
+        setTimeout(() => {
+          playSound("collectible");
+          toast.success(`Item found: ${dId.replace(/_/g, " ")}`, {
+            description: "Check the Pawn Shop to sell it.",
+          });
+        }, 600);
       }
       if (boostJustExpired) {
         setTimeout(
@@ -443,6 +476,7 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         dailyChallenges,
         lowestBalance,
         activeBoost: nextActiveBoost,
+        collectibles: nextCollectibles,
       };
     });
   };
@@ -558,6 +592,61 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         },
       };
     });
+  };
+
+  const addCollectible = (id: string, name: string) => {
+    setState((prev) => {
+      const collectibles = { ...prev.collectibles, [id]: (prev.collectibles[id] ?? 0) + 1 };
+      setTimeout(
+        () =>
+          toast.success(`${name} added to your collection`, {
+            description: "Sell it at the Pawn Shop.",
+          }),
+        0,
+      );
+      return { ...prev, collectibles };
+    });
+  };
+
+  const purchaseCollectible = (id: string, name: string, price: number): boolean => {
+    let success = false;
+    setState((prev) => {
+      if (prev.balance < price) {
+        setTimeout(() => toast.error("Not enough chips for that."), 0);
+        return prev;
+      }
+      success = true;
+      const collectibles = { ...prev.collectibles, [id]: (prev.collectibles[id] ?? 0) + 1 };
+      setTimeout(
+        () =>
+          toast.success(`Bought ${name}`, {
+            description: `−${price} chips · in your collection`,
+          }),
+        0,
+      );
+      return { ...prev, balance: prev.balance - price, collectibles };
+    });
+    return success;
+  };
+
+  const pawnCollectible = (id: string, value: number, name: string): boolean => {
+    let success = false;
+    setState((prev) => {
+      const owned = prev.collectibles[id] ?? 0;
+      if (owned <= 0) {
+        setTimeout(() => toast.error("Nothing to pawn."), 0);
+        return prev;
+      }
+      success = true;
+      const collectibles = { ...prev.collectibles, [id]: owned - 1 };
+      if (collectibles[id] === 0) delete collectibles[id];
+      setTimeout(
+        () => toast.success(`Pawned ${name}`, { description: `+${value} chips` }),
+        0,
+      );
+      return { ...prev, collectibles, balance: prev.balance + value };
+    });
+    return success;
   };
 
   const takeLoan = (principal: number, dailyRate: number): boolean => {
@@ -782,6 +871,9 @@ export function CasinoProvider({ children }: { children: ReactNode }) {
         takeLoan,
         repayLoan,
         pawnItem,
+        pawnCollectible,
+        addCollectible,
+        purchaseCollectible,
       }}
     >
       {children}
