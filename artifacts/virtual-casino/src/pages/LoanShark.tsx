@@ -186,7 +186,7 @@ export default function LoanShark() {
                 key={tier.id}
                 onClick={() => {
                   playSound("coinFlip");
-                  takeLoan(tier.principal, tier.dailyRate);
+                  takeLoan(tier.amount, tier.dailyRate);
                 }}
                 className={cn(
                   "relative text-left rounded-xl border p-4 transition-all hover:-translate-y-0.5 active:scale-[0.98]",
@@ -199,16 +199,16 @@ export default function LoanShark() {
                 )}
               >
                 <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                  {tier.label}
+                  {tier.name}
                 </div>
                 <div className="font-mono text-3xl font-bold mt-1">
-                  +{tier.principal.toLocaleString()}
+                  +{tier.amount.toLocaleString()}
                 </div>
                 <div className="text-xs mt-2 text-foreground/80">
                   {Math.round(tier.dailyRate * 100)}% daily compounded
                 </div>
                 <div className="text-[11px] text-muted-foreground mt-1">
-                  {tier.flavor}
+                  {tier.blurb}
                 </div>
               </button>
             ))}
