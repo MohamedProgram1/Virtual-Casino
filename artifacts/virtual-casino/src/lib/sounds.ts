@@ -280,6 +280,132 @@ const MUSIC_TRACKS: Record<string, MusicTrackDef> = {
       { t: 2.6, f: 659.3, d: 0.34, v: 0.026, w: "sine" },
     ],
   },
+  blues: {
+    bar: 7.2,
+    notes: [
+      // walking E-minor blues bass
+      { t: 0,   f: 82.4,  d: 0.45, v: 0.070, w: "sawtooth" },
+      { t: 0.6, f: 82.4,  d: 0.35, v: 0.060, w: "sawtooth" },
+      { t: 1.2, f: 82.4,  d: 0.45, v: 0.070, w: "sawtooth" },
+      { t: 1.8, f: 82.4,  d: 0.35, v: 0.058, w: "sawtooth" },
+      { t: 2.4, f: 110,   d: 0.45, v: 0.070, w: "sawtooth" },
+      { t: 3.0, f: 110,   d: 0.35, v: 0.058, w: "sawtooth" },
+      { t: 3.6, f: 82.4,  d: 0.45, v: 0.070, w: "sawtooth" },
+      { t: 4.2, f: 82.4,  d: 0.35, v: 0.058, w: "sawtooth" },
+      { t: 4.8, f: 98.0,  d: 0.45, v: 0.070, w: "sawtooth" },
+      { t: 5.4, f: 110,   d: 0.35, v: 0.058, w: "sawtooth" },
+      { t: 6.0, f: 82.4,  d: 0.55, v: 0.070, w: "sawtooth" },
+      // bluesy lead (E pentatonic minor)
+      { t: 0.2, f: 330,   d: 0.60, v: 0.026, w: "triangle" },
+      { t: 0.9, f: 370,   d: 0.50, v: 0.022, w: "triangle" },
+      { t: 1.5, f: 392,   d: 0.65, v: 0.028, w: "triangle" },
+      { t: 2.5, f: 440,   d: 0.60, v: 0.026, w: "triangle" },
+      { t: 3.2, f: 392,   d: 0.50, v: 0.025, w: "triangle" },
+      { t: 3.8, f: 330,   d: 0.80, v: 0.028, w: "triangle" },
+      { t: 4.9, f: 370,   d: 0.45, v: 0.022, w: "triangle" },
+      { t: 5.6, f: 330,   d: 0.70, v: 0.025, w: "triangle" },
+    ],
+  },
+  jazz: {
+    bar: 3.6,
+    notes: [
+      // walking C-major bass (swing feel)
+      { t: 0,    f: 130.8, d: 0.38, v: 0.065, w: "triangle" },
+      { t: 0.45, f: 146.8, d: 0.38, v: 0.055, w: "triangle" },
+      { t: 0.9,  f: 164.8, d: 0.38, v: 0.065, w: "triangle" },
+      { t: 1.35, f: 174.6, d: 0.38, v: 0.055, w: "triangle" },
+      { t: 1.8,  f: 196,   d: 0.38, v: 0.065, w: "triangle" },
+      { t: 2.25, f: 164.8, d: 0.38, v: 0.055, w: "triangle" },
+      { t: 2.7,  f: 146.8, d: 0.38, v: 0.060, w: "triangle" },
+      { t: 3.15, f: 130.8, d: 0.38, v: 0.065, w: "triangle" },
+      // jazzy melody (syncopated)
+      { t: 0.1,  f: 523.3, d: 0.35, v: 0.028, w: "sine" },
+      { t: 0.55, f: 587.3, d: 0.25, v: 0.024, w: "sine" },
+      { t: 0.95, f: 659.3, d: 0.38, v: 0.030, w: "sine" },
+      { t: 1.5,  f: 523.3, d: 0.35, v: 0.028, w: "sine" },
+      { t: 1.95, f: 587.3, d: 0.25, v: 0.024, w: "sine" },
+      { t: 2.35, f: 523.3, d: 0.52, v: 0.030, w: "sine" },
+      { t: 3.05, f: 440,   d: 0.40, v: 0.026, w: "sine" },
+    ],
+  },
+  chill: {
+    bar: 8.0,
+    notes: [
+      // slow Am pad chords
+      { t: 0,   f: 110,   d: 2.2, v: 0.038, w: "sine" },
+      { t: 2.0, f: 130.8, d: 2.2, v: 0.032, w: "sine" },
+      { t: 4.0, f: 110,   d: 2.2, v: 0.038, w: "sine" },
+      { t: 6.0, f: 98.0,  d: 2.2, v: 0.032, w: "sine" },
+      // gentle arpeggio (A minor pentatonic)
+      { t: 0.5, f: 440,   d: 0.90, v: 0.018, w: "triangle" },
+      { t: 1.5, f: 523.3, d: 0.90, v: 0.016, w: "triangle" },
+      { t: 2.5, f: 659.3, d: 0.90, v: 0.018, w: "triangle" },
+      { t: 3.5, f: 523.3, d: 0.90, v: 0.016, w: "triangle" },
+      { t: 4.5, f: 440,   d: 0.90, v: 0.018, w: "triangle" },
+      { t: 5.5, f: 392,   d: 0.90, v: 0.016, w: "triangle" },
+      { t: 6.5, f: 440,   d: 1.00, v: 0.018, w: "triangle" },
+      // ambient lead
+      { t: 1.0, f: 880,   d: 1.6,  v: 0.013, w: "sine" },
+      { t: 3.2, f: 784,   d: 1.6,  v: 0.012, w: "sine" },
+      { t: 5.2, f: 698.5, d: 2.0,  v: 0.013, w: "sine" },
+    ],
+  },
+  retro: {
+    bar: 4.0,
+    notes: [
+      // pulsing D-major synth bass
+      { t: 0,   f: 73.4,  d: 0.22, v: 0.080, w: "sawtooth" },
+      { t: 0.5, f: 73.4,  d: 0.22, v: 0.070, w: "sawtooth" },
+      { t: 1.0, f: 82.4,  d: 0.22, v: 0.080, w: "sawtooth" },
+      { t: 1.5, f: 73.4,  d: 0.22, v: 0.070, w: "sawtooth" },
+      { t: 2.0, f: 65.4,  d: 0.22, v: 0.080, w: "sawtooth" },
+      { t: 2.5, f: 65.4,  d: 0.22, v: 0.070, w: "sawtooth" },
+      { t: 3.0, f: 73.4,  d: 0.22, v: 0.080, w: "sawtooth" },
+      { t: 3.5, f: 73.4,  d: 0.22, v: 0.070, w: "sawtooth" },
+      // arpeggiated square-wave lead
+      { t: 0.1, f: 587.3, d: 0.17, v: 0.032, w: "square" },
+      { t: 0.3, f: 740,   d: 0.17, v: 0.028, w: "square" },
+      { t: 0.5, f: 880,   d: 0.17, v: 0.032, w: "square" },
+      { t: 0.7, f: 740,   d: 0.17, v: 0.028, w: "square" },
+      { t: 1.1, f: 659.3, d: 0.17, v: 0.030, w: "square" },
+      { t: 1.3, f: 740,   d: 0.17, v: 0.028, w: "square" },
+      { t: 1.5, f: 880,   d: 0.22, v: 0.032, w: "square" },
+      { t: 2.1, f: 523.3, d: 0.17, v: 0.030, w: "square" },
+      { t: 2.3, f: 659.3, d: 0.17, v: 0.028, w: "square" },
+      { t: 2.5, f: 784,   d: 0.17, v: 0.032, w: "square" },
+      { t: 2.7, f: 659.3, d: 0.17, v: 0.028, w: "square" },
+      { t: 3.1, f: 587.3, d: 0.17, v: 0.030, w: "square" },
+      { t: 3.3, f: 740,   d: 0.17, v: 0.028, w: "square" },
+      { t: 3.6, f: 587.3, d: 0.35, v: 0.030, w: "square" },
+    ],
+  },
+  deephouse: {
+    bar: 4.8,
+    notes: [
+      // four-on-the-floor kick sub — G
+      { t: 0,    f: 98,   d: 0.35, v: 0.085, w: "sine" },
+      { t: 1.2,  f: 98,   d: 0.35, v: 0.085, w: "sine" },
+      { t: 2.4,  f: 98,   d: 0.35, v: 0.085, w: "sine" },
+      { t: 3.6,  f: 98,   d: 0.35, v: 0.085, w: "sine" },
+      // bass synth (Gm)
+      { t: 0,    f: 98,   d: 0.55, v: 0.045, w: "sawtooth" },
+      { t: 0.6,  f: 110,  d: 0.30, v: 0.038, w: "sawtooth" },
+      { t: 1.2,  f: 98,   d: 0.55, v: 0.045, w: "sawtooth" },
+      { t: 2.4,  f: 87.3, d: 0.55, v: 0.045, w: "sawtooth" },
+      { t: 3.0,  f: 98,   d: 0.30, v: 0.038, w: "sawtooth" },
+      { t: 3.6,  f: 110,  d: 0.55, v: 0.045, w: "sawtooth" },
+      // atmospheric chord stabs
+      { t: 0.8,  f: 392,  d: 0.40, v: 0.018, w: "triangle" },
+      { t: 0.8,  f: 494,  d: 0.40, v: 0.015, w: "triangle" },
+      { t: 2.0,  f: 370,  d: 0.40, v: 0.018, w: "triangle" },
+      { t: 2.0,  f: 466,  d: 0.40, v: 0.015, w: "triangle" },
+      { t: 4.0,  f: 392,  d: 0.40, v: 0.018, w: "triangle" },
+      // silky lead
+      { t: 1.0,  f: 784,  d: 0.8,  v: 0.016, w: "sine" },
+      { t: 2.2,  f: 740,  d: 0.8,  v: 0.015, w: "sine" },
+      { t: 3.4,  f: 784,  d: 1.2,  v: 0.016, w: "sine" },
+    ],
+  },
 };
 
 let musicGain: GainNode | null = null;
