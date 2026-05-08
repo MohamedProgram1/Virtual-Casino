@@ -3,7 +3,6 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Coins,
-  Crown,
   History as HistoryIcon,
   Settings as SettingsIcon,
   ArrowLeft,
@@ -11,6 +10,7 @@ import {
   Award,
   KeyRound,
   RotateCw,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -27,8 +27,8 @@ const STATIC_TITLES: Record<string, string> = {
   "/history": "History",
   "/settings": "Settings",
   "/store": "The Vault Store",
-  "/bar": "Mystery Drink",
-  "/lounge": "The Bar",
+  "/bar": "The Bar",
+  "/lounge": "The Lounge",
   "/loan-shark": "Loan Shark & Pawn",
 };
 
@@ -57,40 +57,86 @@ const PAGE_TITLES: Record<string, string> = {
   ...GAME_PAGE_TITLES,
 };
 
+// ── Balance ─────────────────────────────────────────────────────────────────
+
 function ChipBalance() {
   const { balance, refill, lastRefillTime } = useCasinoStore();
   const canRefill = Date.now() - lastRefillTime >= 30_000;
-  const showRefill = balance < 100;
+  const low = balance < 100;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2">
       <motion.div
         key={balance}
-        initial={{ scale: 1.15 }}
+        initial={{ scale: 1.18 }}
         animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 400, damping: 15 }}
-        className="flex items-center gap-2 px-4 py-2 rounded-full border border-primary/40 bg-gradient-to-b from-primary/15 to-primary/5 shadow-inner"
+        transition={{ type: "spring", stiffness: 420, damping: 16 }}
+        className={cn(
+          "flex items-center gap-1.5 px-3 py-1.5 rounded-full border font-mono font-semibold tabular-nums text-sm",
+          low
+            ? "border-amber-500/50 bg-amber-500/10 text-amber-200 shadow-[0_0_12px_rgba(212,160,23,0.18)]"
+            : "border-primary/35 bg-gradient-to-b from-primary/12 to-primary/5 text-foreground",
+        )}
       >
-        <Coins className="w-4 h-4 text-primary" />
-        <span className="font-mono font-semibold tabular-nums text-foreground">
-          {balance.toLocaleString()}
-        </span>
+        <Coins className="w-3.5 h-3.5 text-primary shrink-0" />
+        <span>{balance.toLocaleString()}</span>
       </motion.div>
-      {showRefill && (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={refill}
-          disabled={!canRefill}
-          className="border-primary/40 text-primary hover:bg-primary/10"
-        >
-          <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-          Refill +500
-        </Button>
+
+      {low && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={refill}
+              disabled={!canRefill}
+              className="h-7 px-2.5 text-xs border border-primary/25 hover:bg-primary/10 text-primary disabled:opacity-30"
+            >
+              <Sparkles className="w-3 h-3 mr-1" />
+              +500
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <span className="text-xs">{canRefill ? "Refill 500 chips" : "Wait 30 s between refills"}</span>
+          </TooltipContent>
+        </Tooltip>
       )}
     </div>
   );
 }
+
+// ── Level badge ──────────────────────────────────────────────────────────────
+
+function LevelBadge() {
+  const { stats } = useCasinoStore();
+  const level = getLevelFor(stats.handsPlayed);
+  const next  = getNextLevel(stats.handsPlayed);
+  const pct   = next
+    ? ((stats.handsPlayed - level.threshold) / (next.threshold - level.threshold)) * 100
+    : 100;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border/60 bg-card/40 cursor-default">
+          <Award className="w-3 h-3 text-primary/80" />
+          <span className="text-[11px] font-semibold text-zinc-300">{level.name}</span>
+          <div className="w-10 h-1 rounded-full bg-zinc-800 overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-primary/60 to-primary rounded-full" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        {next
+          ? <span>{next.threshold - stats.handsPlayed} hands to <span className="text-primary">{next.name}</span></span>
+          : <span>Highest tier reached.</span>
+        }
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// ── Title badge ──────────────────────────────────────────────────────────────
 
 function TitleBadge() {
   const { equippedTitle } = useCasinoStore();
@@ -101,59 +147,17 @@ function TitleBadge() {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-400/40 bg-gradient-to-b from-amber-300/15 to-amber-700/10 cursor-default">
-          <Icon className="w-3.5 h-3.5 text-amber-300" />
-          <span className="text-xs font-semibold text-amber-100 tracking-wide">
-            {a.name}
-          </span>
+        <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-full border border-amber-400/35 bg-amber-400/8 cursor-default">
+          <Icon className="w-3 h-3 text-amber-300" />
+          <span className="text-[11px] font-semibold text-amber-200">{a.name}</span>
         </div>
       </TooltipTrigger>
-      <TooltipContent>
-        <span className="text-xs">{a.description}</span>
-      </TooltipContent>
+      <TooltipContent><span className="text-xs">{a.description}</span></TooltipContent>
     </Tooltip>
   );
 }
 
-function LevelBadge() {
-  const { stats } = useCasinoStore();
-  const level = getLevelFor(stats.handsPlayed);
-  const next = getNextLevel(stats.handsPlayed);
-  const progress = next
-    ? ((stats.handsPlayed - level.threshold) /
-        (next.threshold - level.threshold)) *
-      100
-    : 100;
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border border-primary/25 bg-card/40 cursor-default">
-          <Award className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-semibold text-foreground">
-            {level.name}
-          </span>
-          <div className="w-12 h-1 rounded-full bg-background overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-primary/60 to-primary"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-      </TooltipTrigger>
-      <TooltipContent>
-        {next ? (
-          <span>
-            {next.threshold - stats.handsPlayed} hands to{" "}
-            <span className="text-primary">{next.name}</span>
-          </span>
-        ) : (
-          <span>Highest tier reached.</span>
-        )}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
+// ── Boost badge ──────────────────────────────────────────────────────────────
 
 function BoostBadge() {
   const { activeBoost } = useCasinoStore();
@@ -167,26 +171,21 @@ function BoostBadge() {
           initial={{ scale: 1.15 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 400, damping: 18 }}
-          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-emerald-400/45 bg-gradient-to-b from-emerald-500/15 to-emerald-700/10 cursor-default"
+          className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full border border-emerald-400/40 bg-emerald-500/8 cursor-default"
         >
-          <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-          <span className="text-xs font-semibold text-emerald-100">
-            +{pct}%
-          </span>
-          <span className="text-[10px] text-emerald-200/80 font-mono">
-            ×{activeBoost.usesLeft}
-          </span>
+          <Zap className="w-3 h-3 text-emerald-300" />
+          <span className="text-[11px] font-semibold text-emerald-200">+{pct}%</span>
+          <span className="text-[10px] text-emerald-400/70 font-mono">×{activeBoost.usesLeft}</span>
         </motion.div>
       </TooltipTrigger>
       <TooltipContent>
-        <span className="text-xs">
-          {activeBoost.name} · {activeBoost.usesLeft} winning bet
-          {activeBoost.usesLeft === 1 ? "" : "s"} left
-        </span>
+        <span className="text-xs">{activeBoost.name} · {activeBoost.usesLeft} bet{activeBoost.usesLeft === 1 ? "" : "s"} left</span>
       </TooltipContent>
     </Tooltip>
   );
 }
+
+// ── Debt badge ───────────────────────────────────────────────────────────────
 
 function DebtBadge() {
   const { loan } = useCasinoStore();
@@ -197,13 +196,11 @@ function DebtBadge() {
       <TooltipTrigger asChild>
         <motion.div
           animate={{ scale: [1, 1.04, 1] }}
-          transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
-          className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-red-500/50 bg-gradient-to-b from-red-500/20 to-red-900/10 cursor-default"
+          transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+          className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full border border-red-500/45 bg-red-500/10 cursor-default"
         >
-          <span className="text-[10px] font-bold text-red-300 uppercase tracking-wider">Owed</span>
-          <span className="font-mono font-semibold text-red-200 text-xs tabular-nums">
-            {owed.toLocaleString()}
-          </span>
+          <span className="text-[9px] font-bold text-red-400 uppercase tracking-wider">Owed</span>
+          <span className="font-mono font-semibold text-red-300 text-[11px] tabular-nums">{owed.toLocaleString()}</span>
         </motion.div>
       </TooltipTrigger>
       <TooltipContent>
@@ -213,22 +210,24 @@ function DebtBadge() {
   );
 }
 
+// ── Owner badge ──────────────────────────────────────────────────────────────
+
 function OwnerBadge() {
   const { ownerMode } = useCasinoStore();
   if (!ownerMode) return null;
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="hidden sm:flex items-center justify-center w-8 h-8 rounded-full border border-amber-400/50 bg-gradient-to-b from-amber-400/20 to-amber-700/15">
-          <KeyRound className="w-3.5 h-3.5 text-amber-300" />
+        <div className="hidden sm:flex items-center justify-center w-7 h-7 rounded-full border border-amber-400/45 bg-amber-400/10">
+          <KeyRound className="w-3 h-3 text-amber-300" />
         </div>
       </TooltipTrigger>
-      <TooltipContent>
-        <span className="text-xs">Owner mode active</span>
-      </TooltipContent>
+      <TooltipContent><span className="text-xs">Owner mode active</span></TooltipContent>
     </Tooltip>
   );
 }
+
+// ── Play again FAB ───────────────────────────────────────────────────────────
 
 function PlayAgainFab() {
   const slot = usePlayAgainSlot();
@@ -258,75 +257,129 @@ function PlayAgainFab() {
   );
 }
 
+// ── Layout ───────────────────────────────────────────────────────────────────
+
 export default function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const pageTitle = PAGE_TITLES[location] ?? "Lucky Vault";
-  const isLobby = location === "/";
+  const isLobby   = location === "/";
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Top Bar */}
-      <header className="sticky top-0 z-40 border-b border-primary/15 bg-background/80 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 min-w-0">
-            {!isLobby ? (
+    <div className="min-h-screen flex flex-col bg-background">
+
+      {/* ── Top bar ── */}
+      <header className="sticky top-0 z-40">
+        {/* Subtle gold gradient strip at the very top */}
+        <div className="h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+
+        <div
+          className="border-b border-primary/12 backdrop-blur-xl"
+          style={{
+            background: "linear-gradient(180deg, rgba(212,160,23,0.055) 0%, rgba(0,0,0,0.72) 100%)",
+          }}
+        >
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-3">
+
+            {/* ── Left: logo + page context ── */}
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+
+              {/* Logo — always visible */}
               <Link href="/">
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary shrink-0">
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
-              </Link>
-            ) : (
-              <Link href="/">
-                <div className="flex items-center gap-2 group cursor-pointer shrink-0">
-                  <Crown className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
-                  <span className="font-serif text-xl tracking-wide casino-gradient-text hidden sm:inline">
+                <motion.div
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex items-center gap-1.5 cursor-pointer shrink-0 group"
+                >
+                  {/* Crown with glow */}
+                  <div className="relative flex items-center justify-center w-7 h-7 rounded-full border border-primary/30 bg-primary/10 group-hover:border-primary/60 transition-colors">
+                    <span className="text-sm">👑</span>
+                    <div className="absolute inset-0 rounded-full blur-md bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <span className="font-serif text-base sm:text-lg tracking-wide casino-gradient-text hidden xs:inline">
                     Lucky Vault
                   </span>
-                </div>
+                </motion.div>
               </Link>
-            )}
-            <div className="h-6 w-px bg-primary/20 hidden sm:block" />
-            <h1 className="font-serif text-lg sm:text-xl truncate">{pageTitle}</h1>
-          </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <TitleBadge />
-            <LevelBadge />
-            <BoostBadge />
-            <DebtBadge />
-            <OwnerBadge />
-            <ChipBalance />
-            <div className="hidden sm:flex items-center gap-1">
-              <Link href="/history">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    "text-muted-foreground hover:text-primary",
-                    location === "/history" && "text-primary",
-                  )}
-                >
-                  <HistoryIcon className="w-5 h-5" />
-                </Button>
-              </Link>
-              <Link href="/settings">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    "text-muted-foreground hover:text-primary",
-                    location === "/settings" && "text-primary",
-                  )}
-                >
-                  <SettingsIcon className="w-5 h-5" />
-                </Button>
-              </Link>
+              {/* Separator + page context */}
+              {!isLobby && (
+                <>
+                  <div className="w-px h-5 bg-primary/15 shrink-0" />
+                  <Link href="/">
+                    <Button variant="ghost" size="icon"
+                      className="w-7 h-7 text-zinc-500 hover:text-primary shrink-0 transition-colors">
+                      <ArrowLeft className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                  <h1 className="font-serif text-base sm:text-lg truncate text-zinc-200 min-w-0">
+                    {pageTitle}
+                  </h1>
+                </>
+              )}
+
+              {isLobby && (
+                <>
+                  <div className="w-px h-5 bg-primary/15 hidden sm:block shrink-0" />
+                  <span className="hidden sm:block text-xs text-zinc-600 font-medium tracking-wider uppercase">
+                    The Floor
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* ── Right: badges + balance + icons ── */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <TitleBadge />
+              <LevelBadge />
+              <BoostBadge />
+              <DebtBadge />
+              <OwnerBadge />
+
+              {/* Divider before balance */}
+              <div className="w-px h-5 bg-primary/12 hidden sm:block" />
+
+              <ChipBalance />
+
+              {/* Icon nav */}
+              <div className="flex items-center gap-0.5 ml-0.5">
+                <Link href="/history">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon"
+                        className={cn(
+                          "w-8 h-8 text-zinc-600 hover:text-primary transition-colors",
+                          location === "/history" && "text-primary bg-primary/8"
+                        )}>
+                        <HistoryIcon className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><span className="text-xs">History</span></TooltipContent>
+                  </Tooltip>
+                </Link>
+                <Link href="/settings">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon"
+                        className={cn(
+                          "w-8 h-8 text-zinc-600 hover:text-primary transition-colors",
+                          location === "/settings" && "text-primary bg-primary/8"
+                        )}>
+                        <SettingsIcon className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><span className="text-xs">Settings</span></TooltipContent>
+                  </Tooltip>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Bottom glow line */}
+        <div className="h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       </header>
 
-      {/* Page Content */}
+      {/* ── Page content ── */}
       <main className="flex-1 w-full">
         <AnimatePresence mode="wait">
           <motion.div
@@ -334,7 +387,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
             className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10"
           >
             {children}
@@ -344,12 +397,14 @@ export default function Layout({ children }: { children: ReactNode }) {
 
       <PlayAgainFab />
 
-      {/* Footer */}
-      <footer className="border-t border-primary/10 py-6 mt-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-          <p className="text-xs text-muted-foreground">
-            Lucky Vault · Virtual chips, no real money. For entertainment only.
+      {/* ── Footer ── */}
+      <footer className="border-t border-primary/8 py-5 mt-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-center gap-3">
+          <div className="w-1 h-1 rounded-full bg-primary/30" />
+          <p className="text-[11px] text-zinc-700">
+            Lucky Vault · Virtual chips only · For entertainment
           </p>
+          <div className="w-1 h-1 rounded-full bg-primary/30" />
         </div>
       </footer>
     </div>
